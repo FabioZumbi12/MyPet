@@ -39,8 +39,8 @@ import de.Keyle.MyPet.api.util.locale.Translation;
 import de.keyle.knbt.*;
 import org.apache.commons.lang.ArrayUtils;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -227,10 +227,20 @@ public class Beacon extends BeaconInfo implements SkillInstance, Scheduler, NBTS
                                 if (selectedBuffs.indexOf(selectedBuff) != -1) {
                                     selectedBuffs.remove(selectedBuffs.indexOf(selectedBuff));
                                     menu.getOption(buffItemPositions.get(selectedBuff)).setGlowing(false);
+                                    if (selectableBuffs > selectedBuffs.size()) {
+                                        menu.setOption(13, new IconMenuItem().setMaterial(POTION).setTitle(BLUE + Util.formatText(Translation.getString("Message.Skill.Beacon.RemainingBuffs", myPet.getOwner().getLanguage()), selectableBuffs - selectedBuffs.size())).setAmount(selectableBuffs - selectedBuffs.size()));
+                                    } else {
+                                        menu.setOption(13, new IconMenuItem().setMaterial(GLASS_BOTTLE).setTitle(GRAY + Util.formatText(Translation.getString("Message.Skill.Beacon.RemainingBuffs", myPet.getOwner().getLanguage()), 0)));
+                                    }
                                     menu.update();
                                 } else if (selectableBuffs > selectedBuffs.size()) {
                                     selectedBuffs.add(selectedBuff);
                                     menu.getOption(buffItemPositions.get(selectedBuff)).setGlowing(true);
+                                    if (selectableBuffs > selectedBuffs.size()) {
+                                        menu.setOption(13, new IconMenuItem().setMaterial(POTION).setTitle(BLUE + Util.formatText(Translation.getString("Message.Skill.Beacon.RemainingBuffs", myPet.getOwner().getLanguage()), selectableBuffs - selectedBuffs.size())).setAmount(selectableBuffs - selectedBuffs.size()));
+                                    } else {
+                                        menu.setOption(13, new IconMenuItem().setMaterial(GLASS_BOTTLE).setTitle(GRAY + Util.formatText(Translation.getString("Message.Skill.Beacon.RemainingBuffs", myPet.getOwner().getLanguage()), 0)));
+                                    }
                                     menu.update();
                                 } else {
                                     break;
@@ -531,6 +541,8 @@ public class Beacon extends BeaconInfo implements SkillInstance, Scheduler, NBTS
                 selectedBuffs.clear();
             }
 
+            range = range * range;
+
             if (selectedBuffs.size() > selectableBuffs) {
                 int usableBuff = 0;
                 for (int buff : selectedBuffs) {
@@ -559,35 +571,40 @@ public class Beacon extends BeaconInfo implements SkillInstance, Scheduler, NBTS
             List<PotionEffect> potionEffects = new ArrayList<>();
             for (int buff : selectedBuffs) {
                 int amplification = buffLevel.get(buff) - 1;
-                PotionEffect effect = new PotionEffect(PotionEffectType.getById(buff), duration, amplification, true, false);
+                PotionEffect effect = new PotionEffect(PotionEffectType.getById(buff), duration, amplification, true, true);
                 potionEffects.add(effect);
             }
 
-
+            Location myPetLocation = this.myPet.getLocation().get();
             targetLoop:
-            for (Entity e : this.myPet.getEntity().get().getNearbyEntities(range, range, range)) {
-                if (!(e instanceof Player)) {
+            for (Player player : myPetLocation.getWorld().getPlayers()) {
+                if(player.getLocation().distanceSquared(myPetLocation) > range) {
                     continue;
                 }
-                Player player = (Player) e;
 
                 switch (receiver) {
                     case Owner:
                         if (!myPet.getOwner().equals(player)) {
                             continue targetLoop;
                         } else {
-                            player.addPotionEffects(potionEffects);
+                            for (PotionEffect effect : potionEffects) {
+                                player.addPotionEffect(effect, true);
+                            }
                             MyPetApi.getPlatformHelper().playParticleEffect(player.getLocation().add(0, 1, 0), "SPELL_INSTANT", 0.2F, 0.2F, 0.2F, 0.1F, 5, 20);
                             break targetLoop;
                         }
                     case Everyone:
-                        player.addPotionEffects(potionEffects);
+                        for (PotionEffect effect : potionEffects) {
+                            player.addPotionEffect(effect, true);
+                        }
                         MyPetApi.getPlatformHelper().playParticleEffect(player.getLocation().add(0, 1, 0), "SPELL_INSTANT", 0.2F, 0.2F, 0.2F, 0.1F, 5, 20);
                         break;
                     case Party:
                         if (Configuration.Skilltree.Skill.Beacon.PARTY_SUPPORT && members != null) {
                             if (members.contains(player)) {
-                                player.addPotionEffects(potionEffects);
+                                for (PotionEffect effect : potionEffects) {
+                                    player.addPotionEffect(effect, true);
+                                }
                                 MyPetApi.getPlatformHelper().playParticleEffect(player.getLocation().add(0, 1, 0), "SPELL_INSTANT", 0.2F, 0.2F, 0.2F, 0.1F, 5, 20);
                             }
                             break;

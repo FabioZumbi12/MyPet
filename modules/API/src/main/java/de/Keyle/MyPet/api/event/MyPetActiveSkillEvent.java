@@ -21,7 +21,6 @@
 package de.Keyle.MyPet.api.event;
 
 import de.Keyle.MyPet.api.entity.MyPet;
-import de.Keyle.MyPet.api.entity.StoredMyPet;
 import de.Keyle.MyPet.api.player.MyPetPlayer;
 import de.Keyle.MyPet.api.skill.ActiveSkill;
 import org.bukkit.event.Cancellable;
@@ -30,17 +29,17 @@ import org.bukkit.event.HandlerList;
 
 public class MyPetActiveSkillEvent extends Event implements Cancellable {
     private static final HandlerList handlers = new HandlerList();
-    boolean isCancelled = false;
+    protected boolean isCancelled = false;
 
-    private final MyPet myPet;
-    private final ActiveSkill skill;
+    protected final MyPet myPet;
+    protected final ActiveSkill skill;
 
     public MyPetActiveSkillEvent(MyPet myPet, ActiveSkill skill) {
         this.myPet = myPet;
         this.skill = skill;
     }
 
-    public StoredMyPet getMyPet() {
+    public MyPet getMyPet() {
         return myPet;
     }
 

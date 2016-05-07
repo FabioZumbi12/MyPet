@@ -29,8 +29,7 @@ import de.Keyle.MyPet.api.entity.*;
 import de.Keyle.MyPet.api.entity.MyPet.PetState;
 import de.Keyle.MyPet.api.entity.ai.target.TargetPriority;
 import de.Keyle.MyPet.api.entity.types.MyEnderman;
-import de.Keyle.MyPet.api.entity.types.MyRabbit;
-import de.Keyle.MyPet.api.event.MyPetActiveSkillEvent;
+import de.Keyle.MyPet.api.event.MyPetActiveTargetSkillEvent;
 import de.Keyle.MyPet.api.event.MyPetLeashEvent;
 import de.Keyle.MyPet.api.event.MyPetSaveEvent;
 import de.Keyle.MyPet.api.player.DonateCheck;
@@ -56,10 +55,7 @@ import de.Keyle.MyPet.util.CaptureHelper;
 import de.Keyle.MyPet.util.hooks.PvPChecker;
 import de.keyle.fanciful.FancyMessage;
 import de.keyle.fanciful.ItemTooltip;
-import de.keyle.knbt.TagByte;
 import de.keyle.knbt.TagCompound;
-import de.keyle.knbt.TagInt;
-import de.keyle.knbt.TagList;
 import net.citizensnpcs.api.CitizensAPI;
 import org.apache.commons.lang.WordUtils;
 import org.bukkit.Bukkit;
@@ -67,7 +63,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.*;
-import org.bukkit.entity.Skeleton.SkeletonType;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -80,14 +75,13 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.projectiles.ProjectileSource;
 
-import java.util.*;
+import java.util.Map;
 
 import static org.bukkit.Bukkit.getPluginManager;
 
 public class EntityListener implements Listener {
-    Random random = new Random();
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onMyPetEntitySpawn(final CreatureSpawnEvent event) {
         if (event.getEntity() instanceof MyPetBukkitEntity) {
             event.setCancelled(false);
@@ -271,7 +265,7 @@ public class EntityListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onEntityDamageByPlayer(final EntityDamageByEntityEvent event) {
         if (!event.getEntity().isDead() && !(event.getEntity() instanceof MyPetBukkitEntity) && event.getDamager() instanceof Player) {
             if (MyPetApi.getMyPetInfo().isLeashableEntityType(event.getEntity().getType())) {
@@ -340,8 +334,7 @@ public class EntityListener implements Listener {
                             case Tamed:
                                 if (leashTarget instanceof Tameable) {
                                     willBeLeashed = ((Tameable) leashTarget).isTamed() && ((Tameable) leashTarget).getOwner() == damager;
-                                }
-                                if (leashTarget instanceof Horse) {
+                                } else if (leashTarget instanceof Horse) {
                                     willBeLeashed = ((Horse) leashTarget).isTamed() && ((Horse) leashTarget).getOwner() == damager;
                                 }
                                 break;
@@ -392,129 +385,7 @@ public class EntityListener implements Listener {
                         }
                         */
 
-                        TagCompound extendedInfo = new TagCompound();
-                        if (leashTarget instanceof Ocelot) {
-                            extendedInfo.getCompoundData().put("CatType", new TagInt(((Ocelot) leashTarget).getCatType().getId()));
-                            extendedInfo.getCompoundData().put("Sitting", new TagByte(((Ocelot) leashTarget).isSitting()));
-                        } else if (leashTarget instanceof Wolf) {
-                            extendedInfo.getCompoundData().put("Sitting", new TagByte(((Wolf) leashTarget).isSitting()));
-                            extendedInfo.getCompoundData().put("Tamed", new TagByte(((Wolf) leashTarget).isTamed()));
-                            extendedInfo.getCompoundData().put("CollarColor", new TagByte(((Wolf) leashTarget).getCollarColor().getWoolData()));
-                        } else if (leashTarget instanceof Sheep) {
-                            extendedInfo.getCompoundData().put("Color", new TagInt(((Sheep) leashTarget).getColor().getDyeData()));
-                            extendedInfo.getCompoundData().put("Sheared", new TagByte(((Sheep) leashTarget).isSheared()));
-                        } else if (leashTarget instanceof Villager) {
-                            extendedInfo.getCompoundData().put("Profession", new TagInt(((Villager) leashTarget).getProfession().getId()));
-
-                            TagCompound villagerTag = MyPetApi.getPlatformHelper().entityToTag(leashTarget);
-                            String[] allowedTags = {"Riches", "Career", "CareerLevel", "Willing", "Inventory", "Offers"};
-                            Set<String> keys = new HashSet<>(villagerTag.getCompoundData().keySet());
-                            for (Iterator<String> iterator = keys.iterator(); iterator.hasNext(); ) {
-                                String key = iterator.next();
-                                if (Arrays.binarySearch(allowedTags, key) > -1) {
-                                    continue;
-                                }
-                                villagerTag.remove(key);
-                            }
-                            extendedInfo.getCompoundData().put("OriginalData", villagerTag);
-                        } else if (leashTarget instanceof Pig) {
-                            extendedInfo.getCompoundData().put("Saddle", new TagByte(((Pig) leashTarget).hasSaddle()));
-                        } else if (leashTarget instanceof Slime) {
-                            extendedInfo.getCompoundData().put("Size", new TagInt(((Slime) leashTarget).getSize()));
-                        } else if (leashTarget instanceof Creeper) {
-                            extendedInfo.getCompoundData().put("Powered", new TagByte(((Creeper) leashTarget).isPowered()));
-                        } else if (leashTarget instanceof Horse) {
-                            Horse horse = (Horse) leashTarget;
-
-                            byte type = (byte) horse.getVariant().ordinal();
-                            int style = horse.getStyle().ordinal();
-                            int color = horse.getColor().ordinal();
-                            int variant = color & 255 | style << 8;
-
-                            if (horse.getInventory().getArmor() != null) {
-                                TagCompound armor = MyPetApi.getPlatformHelper().itemStackToCompund(horse.getInventory().getArmor());
-                                extendedInfo.getCompoundData().put("Armor", armor);
-                            }
-                            if (horse.getInventory().getSaddle() != null) {
-                                TagCompound saddle = MyPetApi.getPlatformHelper().itemStackToCompund(horse.getInventory().getSaddle());
-                                extendedInfo.getCompoundData().put("Saddle", saddle);
-                            }
-
-                            extendedInfo.getCompoundData().put("Type", new TagByte(type));
-                            extendedInfo.getCompoundData().put("Variant", new TagInt(variant));
-                            extendedInfo.getCompoundData().put("Chest", new TagByte(horse.isCarryingChest()));
-                            extendedInfo.getCompoundData().put("Age", new TagInt(horse.getAge()));
-
-                            if (horse.isCarryingChest()) {
-                                ItemStack[] contents = horse.getInventory().getContents();
-                                for (int i = 2; i < contents.length; i++) {
-                                    ItemStack item = contents[i];
-                                    if (item != null) {
-                                        horse.getWorld().dropItem(horse.getLocation(), item);
-                                    }
-                                }
-                            }
-                        } else if (leashTarget instanceof Zombie) {
-                            extendedInfo.getCompoundData().put("Baby", new TagByte(((Zombie) leashTarget).isBaby()));
-                            if (MyPetApi.getCompatUtil().getMinecraftVersion() >= 19) {
-                                if (((Zombie) leashTarget).isVillager()) {
-                                    extendedInfo.getCompoundData().put("Profession", new TagInt(((Zombie) leashTarget).getVillagerProfession().ordinal() + 1));
-                                }
-                            } else {
-                                extendedInfo.getCompoundData().put("Villager", new TagByte(((Zombie) leashTarget).isVillager()));
-                            }
-                        } else if (leashTarget instanceof Enderman) {
-                            Enderman enderman = (Enderman) leashTarget;
-                            if (enderman.getCarriedMaterial().getItemType() != Material.AIR) {
-                                ItemStack block = enderman.getCarriedMaterial().toItemStack(1);
-                                extendedInfo.getCompoundData().put("Block", MyPetApi.getPlatformHelper().itemStackToCompund(block));
-                            }
-                        } else if (leashTarget instanceof Skeleton) {
-                            extendedInfo.getCompoundData().put("Wither", new TagByte(((Skeleton) leashTarget).getSkeletonType() == SkeletonType.WITHER));
-                        } else if (leashTarget instanceof Guardian) {
-                            extendedInfo.getCompoundData().put("Elder", new TagByte(((Guardian) leashTarget).isElder()));
-                        } else if (leashTarget instanceof Rabbit) {
-                            extendedInfo.getCompoundData().put("Variant", new TagByte(MyRabbit.RabbitType.getTypeByBukkitEnum(((Rabbit) leashTarget).getRabbitType()).getId()));
-                        }
-                        if (leashTarget instanceof Ageable) {
-                            extendedInfo.getCompoundData().put("Baby", new TagByte(!((Ageable) leashTarget).isAdult()));
-                        }
-                        if (leashTarget.getWorld().getGameRuleValue("doMobLoot").equalsIgnoreCase("true") && Configuration.Misc.RETAIN_EQUIPMENT_ON_TAME && (leashTarget instanceof Zombie || leashTarget instanceof PigZombie || leashTarget instanceof Skeleton)) {
-                            List<TagCompound> equipmentList = new ArrayList<>();
-                            if (random.nextFloat() <= leashTarget.getEquipment().getChestplateDropChance()) {
-                                ItemStack itemStack = leashTarget.getEquipment().getChestplate();
-                                if (itemStack != null && itemStack.getType() != Material.AIR) {
-                                    TagCompound item = MyPetApi.getPlatformHelper().itemStackToCompund(itemStack);
-                                    item.getCompoundData().put("Slot", new TagInt(EquipmentSlot.Chestplate.getSlotId()));
-                                    equipmentList.add(item);
-                                }
-                            }
-                            if (random.nextFloat() <= leashTarget.getEquipment().getHelmetDropChance()) {
-                                ItemStack itemStack = leashTarget.getEquipment().getHelmet();
-                                if (itemStack != null && itemStack.getType() != Material.AIR) {
-                                    TagCompound item = MyPetApi.getPlatformHelper().itemStackToCompund(itemStack);
-                                    item.getCompoundData().put("Slot", new TagInt(EquipmentSlot.Helmet.getSlotId()));
-                                    equipmentList.add(item);
-                                }
-                            }
-                            if (random.nextFloat() <= leashTarget.getEquipment().getLeggingsDropChance()) {
-                                ItemStack itemStack = leashTarget.getEquipment().getLeggings();
-                                if (itemStack != null && itemStack.getType() != Material.AIR) {
-                                    TagCompound item = MyPetApi.getPlatformHelper().itemStackToCompund(itemStack);
-                                    item.getCompoundData().put("Slot", new TagInt(EquipmentSlot.Leggins.getSlotId()));
-                                    equipmentList.add(item);
-                                }
-                            }
-                            if (random.nextFloat() <= leashTarget.getEquipment().getBootsDropChance()) {
-                                ItemStack itemStack = leashTarget.getEquipment().getBoots();
-                                if (itemStack != null && itemStack.getType() != Material.AIR) {
-                                    TagCompound item = MyPetApi.getPlatformHelper().itemStackToCompund(itemStack);
-                                    item.getCompoundData().put("Slot", new TagInt(EquipmentSlot.Boots.getSlotId()));
-                                    equipmentList.add(item);
-                                }
-                            }
-                            extendedInfo.getCompoundData().put("Equipment", new TagList(equipmentList));
-                        }
+                        TagCompound extendedInfo = PropertyConverter.convertEntity(leashTarget);
                         inactiveMyPet.setInfo(extendedInfo);
 
                         leashTarget.remove();
@@ -644,7 +515,7 @@ public class EntityListener implements Listener {
                         return;
                     }
                 }
-                if (MyPetApi.getMyPetManager().hasActiveMyPet(player)) {
+                if (damager != damagedEntity && MyPetApi.getMyPetManager().hasActiveMyPet(player)) {
                     MyPet myPet = MyPetApi.getMyPetManager().getMyPet(player);
                     if (myPet.getStatus() == PetState.Here && damagedEntity != myPet.getEntity()) {
                         myPet.getEntity().get().setTarget((LivingEntity) damagedEntity, TargetPriority.OwnerHurts);
@@ -670,7 +541,7 @@ public class EntityListener implements Listener {
                     if (myPet.getSkills().hasSkill(Poison.class)) {
                         Poison poisonSkill = myPet.getSkills().getSkill(Poison.class).get();
                         if (poisonSkill.activate()) {
-                            MyPetActiveSkillEvent skillEvent = new MyPetActiveSkillEvent(myPet, poisonSkill);
+                            MyPetActiveTargetSkillEvent skillEvent = new MyPetActiveTargetSkillEvent(myPet, poisonSkill, (LivingEntity) damagedEntity);
                             Bukkit.getPluginManager().callEvent(skillEvent);
                             if (!skillEvent.isCancelled()) {
                                 poisonSkill.poisonTarget((LivingEntity) damagedEntity);
@@ -681,7 +552,7 @@ public class EntityListener implements Listener {
                     if (!skillUsed && myPet.getSkills().hasSkill(Wither.class)) {
                         Wither witherSkill = myPet.getSkills().getSkill(Wither.class).get();
                         if (witherSkill.activate()) {
-                            MyPetActiveSkillEvent skillEvent = new MyPetActiveSkillEvent(myPet, witherSkill);
+                            MyPetActiveTargetSkillEvent skillEvent = new MyPetActiveTargetSkillEvent(myPet, witherSkill, (LivingEntity) damagedEntity);
                             Bukkit.getPluginManager().callEvent(skillEvent);
                             if (!skillEvent.isCancelled()) {
                                 witherSkill.witherTarget((LivingEntity) damagedEntity);
@@ -692,7 +563,7 @@ public class EntityListener implements Listener {
                     if (!skillUsed && myPet.getSkills().hasSkill(Fire.class)) {
                         Fire fireSkill = myPet.getSkills().getSkill(Fire.class).get();
                         if (fireSkill.activate()) {
-                            MyPetActiveSkillEvent skillEvent = new MyPetActiveSkillEvent(myPet, fireSkill);
+                            MyPetActiveTargetSkillEvent skillEvent = new MyPetActiveTargetSkillEvent(myPet, fireSkill, (LivingEntity) damagedEntity);
                             Bukkit.getPluginManager().callEvent(skillEvent);
                             if (!skillEvent.isCancelled()) {
                                 fireSkill.igniteTarget((LivingEntity) damagedEntity);
@@ -703,7 +574,7 @@ public class EntityListener implements Listener {
                     if (!skillUsed && myPet.getSkills().hasSkill(Slow.class)) {
                         Slow slowSkill = myPet.getSkills().getSkill(Slow.class).get();
                         if (slowSkill.activate()) {
-                            MyPetActiveSkillEvent skillEvent = new MyPetActiveSkillEvent(myPet, slowSkill);
+                            MyPetActiveTargetSkillEvent skillEvent = new MyPetActiveTargetSkillEvent(myPet, slowSkill, (LivingEntity) damagedEntity);
                             Bukkit.getPluginManager().callEvent(skillEvent);
                             if (!skillEvent.isCancelled()) {
                                 slowSkill.slowTarget((LivingEntity) damagedEntity);
@@ -714,7 +585,7 @@ public class EntityListener implements Listener {
                     if (!skillUsed && myPet.getSkills().hasSkill(Knockback.class)) {
                         Knockback knockbackSkill = myPet.getSkills().getSkill(Knockback.class).get();
                         if (knockbackSkill.activate()) {
-                            MyPetActiveSkillEvent skillEvent = new MyPetActiveSkillEvent(myPet, knockbackSkill);
+                            MyPetActiveTargetSkillEvent skillEvent = new MyPetActiveTargetSkillEvent(myPet, knockbackSkill, (LivingEntity) damagedEntity);
                             Bukkit.getPluginManager().callEvent(skillEvent);
                             if (!skillEvent.isCancelled()) {
                                 knockbackSkill.knockbackTarget((LivingEntity) damagedEntity);
@@ -725,7 +596,7 @@ public class EntityListener implements Listener {
                     if (!skillUsed && myPet.getSkills().hasSkill(Lightning.class)) {
                         Lightning lightningSkill = myPet.getSkills().getSkill(Lightning.class).get();
                         if (lightningSkill.activate()) {
-                            MyPetActiveSkillEvent skillEvent = new MyPetActiveSkillEvent(myPet, lightningSkill);
+                            MyPetActiveTargetSkillEvent skillEvent = new MyPetActiveTargetSkillEvent(myPet, lightningSkill, (LivingEntity) damagedEntity);
                             Bukkit.getPluginManager().callEvent(skillEvent);
                             if (!skillEvent.isCancelled()) {
                                 isSkillActive = true;
@@ -737,7 +608,7 @@ public class EntityListener implements Listener {
                     if (!skillUsed && myPet.getSkills().hasSkill(Stomp.class)) {
                         Stomp stompSkill = myPet.getSkills().getSkill(Stomp.class).get();
                         if (stompSkill.activate()) {
-                            MyPetActiveSkillEvent skillEvent = new MyPetActiveSkillEvent(myPet, stompSkill);
+                            MyPetActiveTargetSkillEvent skillEvent = new MyPetActiveTargetSkillEvent(myPet, stompSkill, (LivingEntity) damagedEntity);
                             Bukkit.getPluginManager().callEvent(skillEvent);
                             if (!skillEvent.isCancelled()) {
                                 isSkillActive = true;

@@ -71,7 +71,7 @@ public class CommandInfo implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Translation.getString("Message.No.HasPet", player));
                     return true;
                 }
-            } else if (Permissions.hasLegacy(player, "MyPet.command.info.other", false)) {
+            } else if (Permissions.hasLegacy(player, "MyPet.command.info.other")) {
                 Player p = Bukkit.getServer().getPlayer(args[0]);
                 if (p == null || !p.isOnline()) {
                     sender.sendMessage(Translation.getString("Message.No.PlayerOnline", player));
@@ -215,7 +215,7 @@ public class CommandInfo implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender commandSender, Command command, String s, String[] strings) {
-        if (strings.length == 1 && Permissions.has((Player) commandSender, "MyPet.admin", false)) {
+        if (commandSender instanceof Player && strings.length == 1 && Permissions.has((Player) commandSender, "MyPet.command.info.other")) {
             return null;
         }
         return CommandAdmin.EMPTY_LIST;

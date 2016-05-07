@@ -80,10 +80,10 @@ public class RangedAttack extends AIGoal {
 
     @Override
     public boolean shouldFinish() {
-        if (entityMyPet.getTarget() == null || !target.isAlive() || myPet.getRangedDamage() <= 0 || !entityMyPet.canMove()) {
+        if (!entityMyPet.hasTarget() || myPet.getRangedDamage() <= 0 || !entityMyPet.canMove()) {
             return true;
         }
-        if (this.target.getBukkitEntity() != this.myPet.getEntity().get().getTarget()) {
+        if (this.target.getBukkitEntity() != this.entityMyPet.getTarget()) {
             return true;
         }
         double meleeDamage = myPet.getDamage();
@@ -148,6 +148,11 @@ public class RangedAttack extends AIGoal {
             EntityArrow arrow = new MyPetArrow(world, entityMyPet, target, 1.6F, 1);
             arrow.b(damage);
             arrow.setCritical(false);
+            double distanceX = target.locX - entityMyPet.locX;
+            double distanceY = target.locY + target.getHeadHeight() - 1.100000023841858D - arrow.locY;
+            double distanceZ = target.locZ - entityMyPet.locZ;
+            float distance20percent = MathHelper.sqrt(distanceX * distanceX + distanceZ * distanceZ) * 0.2F;
+            arrow.shoot(distanceX, distanceY + distance20percent, distanceZ, 1.6F, 1);
             entityMyPet.makeSound("random.bow", 1.0F, 1.0F / (entityMyPet.getRandom().nextFloat() * 0.4F + 0.8F));
             world.addEntity(arrow);
         } else if (projectile == Projectiles.Snowball) {
