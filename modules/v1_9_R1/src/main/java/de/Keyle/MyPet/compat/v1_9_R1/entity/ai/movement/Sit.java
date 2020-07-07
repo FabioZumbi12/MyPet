@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -21,11 +21,13 @@
 package de.Keyle.MyPet.compat.v1_9_R1.entity.ai.movement;
 
 import de.Keyle.MyPet.api.entity.ai.AIGoal;
+import de.Keyle.MyPet.api.util.Compat;
 import de.Keyle.MyPet.compat.v1_9_R1.entity.EntityMyPet;
 import de.Keyle.MyPet.compat.v1_9_R1.entity.types.EntityMyOcelot;
 import de.Keyle.MyPet.compat.v1_9_R1.entity.types.EntityMyWolf;
 
-public class Sit extends AIGoal {
+@Compat("v1_9_R1")
+public class Sit implements AIGoal {
     private EntityMyPet entityMyPet;
     private boolean sitting = false;
 
@@ -50,8 +52,7 @@ public class Sit extends AIGoal {
         this.entityMyPet.getPetNavigation().stop();
         if (this.entityMyPet instanceof EntityMyOcelot) {
             ((EntityMyOcelot) this.entityMyPet).applySitting(true);
-        }
-        if (this.entityMyPet instanceof EntityMyWolf) {
+        } else if (this.entityMyPet instanceof EntityMyWolf) {
             ((EntityMyWolf) this.entityMyPet).applySitting(true);
         }
         entityMyPet.setGoalTarget(null);
@@ -61,8 +62,7 @@ public class Sit extends AIGoal {
     public void finish() {
         if (this.entityMyPet instanceof EntityMyOcelot) {
             ((EntityMyOcelot) this.entityMyPet).applySitting(false);
-        }
-        if (this.entityMyPet instanceof EntityMyWolf) {
+        } else if (this.entityMyPet instanceof EntityMyWolf) {
             ((EntityMyWolf) this.entityMyPet).applySitting(false);
         }
     }
@@ -75,7 +75,7 @@ public class Sit extends AIGoal {
         return this.sitting;
     }
 
-    public void toogleSitting() {
+    public void toggleSitting() {
         this.sitting = !this.sitting;
     }
 }

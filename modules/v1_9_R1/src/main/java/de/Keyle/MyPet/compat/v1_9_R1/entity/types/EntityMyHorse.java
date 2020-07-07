@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -33,18 +33,17 @@ import org.bukkit.craftbukkit.v1_9_R1.inventory.CraftItemStack;
 import java.util.UUID;
 
 @EntitySize(width = 0.9999F, height = 1.6F)
-public class EntityMyHorse extends EntityMyPet {
-    private static final DataWatcherObject<Boolean> ageWatcher = DataWatcher.a(EntityMyHorse.class, DataWatcherRegistry.h);
-    private static final DataWatcherObject<Byte> saddleChestWatcher = DataWatcher.a(EntityMyHorse.class, DataWatcherRegistry.a);
-    private static final DataWatcherObject<Integer> typeWatcher = DataWatcher.a(EntityMyHorse.class, DataWatcherRegistry.b);
-    private static final DataWatcherObject<Integer> variantWatcher = DataWatcher.a(EntityMyHorse.class, DataWatcherRegistry.b);
-    private static final DataWatcherObject<Optional<UUID>> ownerWatcher = DataWatcher.a(EntityMyHorse.class, DataWatcherRegistry.m);
-    private static final DataWatcherObject<Integer> armorWatcher = DataWatcher.a(EntityMyHorse.class, DataWatcherRegistry.b);
+public class EntityMyHorse extends EntityMyPet implements IJumpable {
+
+    private static final DataWatcherObject<Boolean> AGE_WATCHER = DataWatcher.a(EntityMyHorse.class, DataWatcherRegistry.h);
+    private static final DataWatcherObject<Byte> SADDLE_CHEST_WATCHER = DataWatcher.a(EntityMyHorse.class, DataWatcherRegistry.a);
+    private static final DataWatcherObject<Integer> TYPE_WATCHER = DataWatcher.a(EntityMyHorse.class, DataWatcherRegistry.b);
+    private static final DataWatcherObject<Integer> VARIANT_WATCHER = DataWatcher.a(EntityMyHorse.class, DataWatcherRegistry.b);
+    private static final DataWatcherObject<Optional<UUID>> OWNER_WATCHER = DataWatcher.a(EntityMyHorse.class, DataWatcherRegistry.m);
+    private static final DataWatcherObject<Integer> ARMOR_WATCHER = DataWatcher.a(EntityMyHorse.class, DataWatcherRegistry.b);
 
     int soundCounter = 0;
     int rearCounter = -1;
-    int ageCounter = -1;
-    int ageFailCounter = 1;
 
     public EntityMyHorse(World world, MyPet myPet) {
         super(world, myPet);
@@ -59,11 +58,11 @@ public class EntityMyHorse extends EntityMyPet {
      * 128 mouth open
      */
     private void applyVisual(int value, boolean flag) {
-        int i = this.datawatcher.get(saddleChestWatcher).byteValue();
+        int i = this.datawatcher.get(SADDLE_CHEST_WATCHER);
         if (flag) {
-            this.datawatcher.set(saddleChestWatcher, (byte) (i | value));
+            this.datawatcher.set(SADDLE_CHEST_WATCHER, (byte) (i | value));
         } else {
-            this.datawatcher.set(saddleChestWatcher, (byte) (i & (~value)));
+            this.datawatcher.set(SADDLE_CHEST_WATCHER, (byte) (i & (~value)));
         }
     }
 
@@ -196,17 +195,8 @@ public class EntityMyHorse extends EntityMyPet {
                         entityhuman.inventory.setItem(entityhuman.inventory.itemInHandIndex, null);
                     }
                 }
-                getMyPet().setAge(getMyPet().getAge() + 3000);
+                getMyPet().setBaby(false);
                 return true;
-            }
-            if (itemStack.getItem() == Items.BREAD ||
-                    itemStack.getItem() == Items.WHEAT ||
-                    itemStack.getItem() == Items.GOLDEN_APPLE ||
-                    itemStack.getItem() == Item.getItemOf(Blocks.HAY_BLOCK) ||
-                    itemStack.getItem() == Items.GOLDEN_CARROT ||
-                    itemStack.getItem() == Items.APPLE ||
-                    itemStack.getItem() == Items.SUGAR) {
-                ageCounter = 5;
             }
         }
         return false;
@@ -223,20 +213,25 @@ public class EntityMyHorse extends EntityMyPet {
 
     protected void initDatawatcher() {
         super.initDatawatcher();
-        this.datawatcher.register(ageWatcher, false);               // age
-        this.datawatcher.register(saddleChestWatcher, (byte) 0);    // saddle & chest
-        this.datawatcher.register(typeWatcher, 0);                  // horse type
-        this.datawatcher.register(variantWatcher, 0);               // variant
-        this.datawatcher.register(ownerWatcher, Optional.absent()); // owner
-        this.datawatcher.register(armorWatcher, 0);                 // armor
+        this.datawatcher.register(AGE_WATCHER, false);
+        this.datawatcher.register(SADDLE_CHEST_WATCHER, (byte) 0);    // saddle & chest
+        this.datawatcher.register(TYPE_WATCHER, 0);                  // horse type
+        this.datawatcher.register(VARIANT_WATCHER, 0);               // variant
+        this.datawatcher.register(OWNER_WATCHER, Optional.absent()); // owner
+        this.datawatcher.register(ARMOR_WATCHER, 0);                 // armor
+    }
+
+    protected void initAttributes() {
+        super.initAttributes();
+        this.getAttributeMap().b(EntityHorse.attributeJumpStrength);
     }
 
     @Override
     public void updateVisuals() {
-        this.datawatcher.set(ageWatcher, getMyPet().isBaby());
-        this.datawatcher.set(armorWatcher, getHorseArmorId(getMyPet().getArmor()));
-        this.datawatcher.set(typeWatcher, (int) getMyPet().getHorseType());
-        this.datawatcher.set(variantWatcher, getMyPet().getVariant());
+        this.datawatcher.set(AGE_WATCHER, getMyPet().isBaby());
+        this.datawatcher.set(ARMOR_WATCHER, getHorseArmorId(getMyPet().getArmor()));
+        this.datawatcher.set(TYPE_WATCHER, (int) getMyPet().getHorseType());
+        this.datawatcher.set(VARIANT_WATCHER, getMyPet().getVariant());
         applyVisual(8, getMyPet().hasChest());
         applyVisual(4, getMyPet().hasSaddle());
     }
@@ -244,9 +239,11 @@ public class EntityMyHorse extends EntityMyPet {
     public void onLivingUpdate() {
         boolean oldRiding = hasRider;
         super.onLivingUpdate();
-        if (rearCounter > -1 && rearCounter-- == 0) {
-            applyVisual(64, false);
-            rearCounter = -1;
+        if (!hasRider) {
+            if (rearCounter > -1 && rearCounter-- == 0) {
+                applyVisual(64, false);
+                rearCounter = -1;
+            }
         }
         if (oldRiding != hasRider) {
             if (hasRider) {
@@ -254,12 +251,6 @@ public class EntityMyHorse extends EntityMyPet {
             } else {
                 applyVisual(4, getMyPet().hasSaddle());
             }
-        }
-
-        if (ageCounter > -1 && ageCounter-- == 0) {
-            // TODO this.datawatcher.set(12, Byte.valueOf((byte) MathHelper.clamp(getMyPet().getAge() + ageFailCounter++, -1, 1)));
-            ageCounter = -1;
-            ageFailCounter %= 1000;
         }
     }
 
@@ -291,5 +282,19 @@ public class EntityMyHorse extends EntityMyPet {
 
     public MyHorse getMyPet() {
         return (MyHorse) myPet;
+    }
+
+    @Override
+    public boolean b() {
+        return true;
+    }
+
+    @Override
+    public void b(int i) {
+        this.jumpPower = i;
+    }
+
+    @Override
+    public void r_() {
     }
 }

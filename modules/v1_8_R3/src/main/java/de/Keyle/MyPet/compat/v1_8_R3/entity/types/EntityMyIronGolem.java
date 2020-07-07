@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -42,7 +42,7 @@ public class EntityMyIronGolem extends EntityMyPet {
         try {
             this.world.broadcastEntityEffect(this, (byte) 4);
             flag = super.attack(entity);
-            if (Configuration.MyPet.IronGolem.CAN_THROW_UP && flag) {
+            if (Configuration.MyPet.IronGolem.CAN_TOSS_UP && flag) {
                 entity.motY += 0.4000000059604645D;
                 this.world.makeSound(this, "mob.irongolem.throw", 1.0F, 1.0F);
             }
@@ -68,7 +68,7 @@ public class EntityMyIronGolem extends EntityMyPet {
 
     protected void initDatawatcher() {
         super.initDatawatcher();
-        this.datawatcher.a(16, new Byte((byte) 0)); // flower???
+        this.datawatcher.a(16, (byte) 0); // flower???
     }
 
     public boolean handlePlayerInteraction(EntityHuman entityhuman) {

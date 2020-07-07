@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -21,31 +21,28 @@
 package de.Keyle.MyPet.api.player;
 
 import de.Keyle.MyPet.api.Util;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 
 public class DonateCheck {
     public enum DonationRank {
-        Creator(ChatColor.GOLD + "☣ " + ChatColor.UNDERLINE + "Creator of MyPet" + ChatColor.RESET + ChatColor.GOLD + " ☣" + ChatColor.RESET),
-        Donator(ChatColor.GOLD + "❤ " + ChatColor.UNDERLINE + "Donator" + ChatColor.RESET + ChatColor.GOLD + " ❤" + ChatColor.RESET),
-        Translator(ChatColor.GOLD + "✈ " + ChatColor.UNDERLINE + "Translator" + ChatColor.RESET + ChatColor.GOLD + " ✈" + ChatColor.RESET),
-        Developer(ChatColor.GOLD + "✪ " + ChatColor.UNDERLINE + "Developer" + ChatColor.RESET + ChatColor.GOLD + " ✪" + ChatColor.RESET),
-        Helper(ChatColor.GOLD + "☘ " + ChatColor.UNDERLINE + "Helper" + ChatColor.RESET + ChatColor.GOLD + " ☘" + ChatColor.RESET),
-        Premium(ChatColor.GOLD + "$ " + ChatColor.UNDERLINE + "Premium" + ChatColor.RESET + ChatColor.GOLD + " $" + ChatColor.RESET),
+        Creator("☣"),
+        Donator("❤"),
+        Translator("✈"),
+        Developer("✪"),
+        Helper("☘"),
+        Premium("$"),
         None("");
 
-        String displayText;
+        String defaultIcon;
 
-        DonationRank(String displayText) {
-            this.displayText = displayText;
+        DonationRank(String defaultIcon) {
+            this.defaultIcon = defaultIcon;
         }
 
-        public String getDisplayText() {
-            return displayText;
+        public String getDefaultIcon() {
+            return defaultIcon;
         }
     }
 
-    //donate-delete-start
     public static DonationRank getDonationRank(MyPetPlayer player) {
         try {
             // Check whether this player has donated or is a helper for the MyPet project
@@ -58,13 +55,13 @@ public class DonateCheck {
             //   5 for creator
             //   6 for premium
             // no data will be saved on the server
-            String mode;
-            if (Bukkit.getOnlineMode()) {
-                mode = "userid=" + player.getPlayerUUID();
+            String check;
+            if (player.getMojangUUID() != null) {
+                check = "userid=" + player.getMojangUUID();
             } else {
-                mode = "username=" + player.getName();
+                check = "username=" + player.getName();
             }
-            String donation = Util.readUrlContent("http://donation.mypet-plugin.de/donated.php?" + mode);
+            String donation = Util.readUrlContent("http://particle.mypet-plugin.de/?" + check);
             switch (donation) {
                 case "1":
                     return DonationRank.Donator;
@@ -83,5 +80,4 @@ public class DonateCheck {
         }
         return DonationRank.None;
     }
-    //donate-delete-end
 }

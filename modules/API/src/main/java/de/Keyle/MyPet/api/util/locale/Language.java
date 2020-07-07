@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -20,21 +20,20 @@
 
 package de.Keyle.MyPet.api.util.locale;
 
+import lombok.Getter;
+
 import java.util.HashMap;
 import java.util.Map;
 
 public class Language {
-    private boolean loaded = false;
-    private String code;
+
+    @Getter private String code;
     private Map<String, Country> countries = new HashMap<>();
-    private ResourceBundle translations = null;
+    private TranslationBundle translations;
 
     public Language(String code) {
         this.code = code;
-    }
-
-    public String getCode() {
-        return code;
+        this.translations = Translation.loadLocale(getCode());
     }
 
     public String translate(String key, String country) {
@@ -47,8 +46,6 @@ public class Language {
             return translated;
         }
 
-        load();
-
         if (translations != null) {
             if (translations.containsKey(key)) {
                 translated = translations.getString(key);
@@ -58,7 +55,6 @@ public class Language {
     }
 
     public String translate(String key) {
-        load();
         String translated = key;
         if (translations != null) {
             if (translations.containsKey(key)) {
@@ -66,12 +62,5 @@ public class Language {
             }
         }
         return translated;
-    }
-
-    private void load() {
-        if (!loaded) {
-            loaded = true;
-            translations = Translation.loadLocale(getCode());
-        }
     }
 }

@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -21,9 +21,11 @@
 package de.Keyle.MyPet.compat.v1_8_R2.entity.ai.movement;
 
 import de.Keyle.MyPet.api.entity.ai.AIGoal;
+import de.Keyle.MyPet.api.util.Compat;
 import de.Keyle.MyPet.compat.v1_8_R2.entity.EntityMyPet;
 
-public class RandomLookaround extends AIGoal {
+@Compat("v1_8_R2")
+public class RandomLookaround implements AIGoal {
     private EntityMyPet petEntity;
     private double directionX;
     private double directionZ;

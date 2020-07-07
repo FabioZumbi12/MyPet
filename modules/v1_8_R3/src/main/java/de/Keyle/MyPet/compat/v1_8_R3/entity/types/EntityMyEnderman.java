@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -20,14 +20,13 @@
 
 package de.Keyle.MyPet.compat.v1_8_R3.entity.types;
 
-import com.google.common.base.Optional;
 import de.Keyle.MyPet.api.Util;
 import de.Keyle.MyPet.api.entity.EntitySize;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.types.MyEnderman;
-import de.Keyle.MyPet.api.skill.skills.BehaviorInfo;
+import de.Keyle.MyPet.api.skill.skills.Behavior;
 import de.Keyle.MyPet.compat.v1_8_R3.entity.EntityMyPet;
-import de.Keyle.MyPet.skill.skills.Behavior;
+import de.Keyle.MyPet.skill.skills.BehaviorImpl;
 import net.minecraft.server.v1_8_R3.*;
 import org.bukkit.craftbukkit.v1_8_R3.inventory.CraftItemStack;
 
@@ -82,7 +81,7 @@ public class EntityMyEnderman extends EntityMyPet {
                 }
 
                 return true;
-            } else if (getMyPet().getBlock() == null && Util.isBetween(1, 256, Item.getId(itemStack.getItem())) && getOwner().getPlayer().isSneaking()) {
+            } else if (getMyPet().getBlock() == null && Util.isBetween(1, 255, Item.getId(itemStack.getItem())) && getOwner().getPlayer().isSneaking()) {
                 getMyPet().setBlock(CraftItemStack.asBukkitCopy(itemStack));
                 if (!entityhuman.abilities.canInstantlyBuild) {
                     if (--itemStack.count <= 0) {
@@ -97,9 +96,9 @@ public class EntityMyEnderman extends EntityMyPet {
 
     protected void initDatawatcher() {
         super.initDatawatcher();
-        this.datawatcher.a(16, new Short((short) 0));  // blockID
-        this.datawatcher.a(17, new Byte((byte) 0));    // blockData
-        this.datawatcher.a(18, new Byte((byte) 0));    // face(angry)
+        this.datawatcher.a(16, (short) 0);  // blockID
+        this.datawatcher.a(17, (byte) 0);    // blockData
+        this.datawatcher.a(18, (byte) 0);    // face(angry)
     }
 
     @Override
@@ -111,17 +110,15 @@ public class EntityMyEnderman extends EntityMyPet {
 
     protected void doMyPetTick() {
         super.doMyPetTick();
-        Optional<Behavior> skill = getMyPet().getSkills().getSkill(Behavior.class);
-        if (skill.isPresent()) {
-            BehaviorInfo.BehaviorState behavior = skill.get().getBehavior();
-            if (behavior == BehaviorInfo.BehaviorState.Aggressive) {
-                if (!getMyPet().isScreaming()) {
-                    getMyPet().setScreaming(true);
-                }
-            } else {
-                if (getMyPet().isScreaming()) {
-                    getMyPet().setScreaming(false);
-                }
+        BehaviorImpl skill = getMyPet().getSkills().get(BehaviorImpl.class);
+        Behavior.BehaviorMode behavior = skill.getBehavior();
+        if (behavior == Behavior.BehaviorMode.Aggressive) {
+            if (!getMyPet().isScreaming()) {
+                getMyPet().setScreaming(true);
+            }
+        } else {
+            if (getMyPet().isScreaming()) {
+                getMyPet().setScreaming(false);
             }
         }
     }

@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -21,32 +21,41 @@
 package de.Keyle.MyPet.compat.v1_8_R2.util.inventory;
 
 import de.Keyle.MyPet.MyPetApi;
+import de.Keyle.MyPet.api.Util;
+import de.Keyle.MyPet.api.util.Compat;
 import de.keyle.knbt.TagByte;
 import de.keyle.knbt.TagCompound;
 import de.keyle.knbt.TagList;
 import net.minecraft.server.v1_8_R2.*;
+import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_8_R2.CraftWorld;
 import org.bukkit.craftbukkit.v1_8_R2.entity.CraftHumanEntity;
 import org.bukkit.craftbukkit.v1_8_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_8_R2.inventory.CraftInventory;
 import org.bukkit.craftbukkit.v1_8_R2.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_8_R2.util.CraftMagicNumbers;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.server.PluginDisableEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Compat("v1_8_R2")
 public class CustomInventory implements IInventory, Listener, de.Keyle.MyPet.api.util.inventory.CustomInventory {
-    private String inventroyName = null;
+
+    private String inventroyName = "";
     private List<ItemStack> items = new ArrayList<>();
     private int size = 0;
     private int stackSize = 64;
     private List<HumanEntity> transaction = new ArrayList<>();
+    private CraftInventory bukkitInventory = null;
 
     public CustomInventory() {
         Bukkit.getPluginManager().registerEvents(this, MyPetApi.getPlugin());
@@ -63,8 +72,10 @@ public class CustomInventory implements IInventory, Listener, de.Keyle.MyPet.api
     }
 
     public void setSize(int size) {
-        this.size = size;
-        for (int i = items.size(); i < size; i++) {
+        size = (int) (size / 9.);
+        size *= 9;
+        this.size = Util.clamp(size, 0, 54);
+        for (int i = items.size(); i < this.size; i++) {
             items.add(i, null);
         }
     }
@@ -74,10 +85,10 @@ public class CustomInventory implements IInventory, Listener, de.Keyle.MyPet.api
     }
 
     public void setName(String name) {
-        if (name != null && name.length() > 64) {
-            name = name.substring(0, 64);
+        if (name != null) {
+            name = StringUtils.left(name, 64);
+            this.inventroyName = name;
         }
-        this.inventroyName = name;
     }
 
     public ItemStack getItem(int i) {
@@ -143,11 +154,19 @@ public class CustomInventory implements IInventory, Listener, de.Keyle.MyPet.api
         return itemAdd.getAmount();
     }
 
+    @Override
+    public Inventory getBukkitInventory() {
+        if (bukkitInventory == null) {
+            bukkitInventory = new CraftInventory(this);
+        }
+        return bukkitInventory;
+    }
+
     public void dropContentAt(Location loc) {
         World world = ((CraftWorld) loc.getWorld()).getHandle();
         for (int i = 0; i < this.getSize(); i++) {
             ItemStack is = this.splitWithoutUpdate(i);
-            if (is != null) {
+            if (is != null && CraftMagicNumbers.getMaterial(is.getItem()) != org.bukkit.Material.AIR) {
                 is = is.cloneItemStack();
                 EntityItem itemEntity = new EntityItem(world, loc.getX(), loc.getY(), loc.getZ(), is);
                 itemEntity.pickupDelay = 20;
@@ -165,14 +184,11 @@ public class CustomInventory implements IInventory, Listener, de.Keyle.MyPet.api
             } else {
                 ItemStack itemStack = items.get(slot);
 
-                // --------------------------------------------------------------------------------------------
-                // ToDo: replace with cloneAndSubtract(int i) on next Bukkit revision
                 ItemStack splittedStack = new ItemStack(itemStack.getItem(), subtract, itemStack.getData());
                 if (itemStack.getTag() != null) {
                     splittedStack.setTag(((NBTTagCompound) itemStack.getTag().clone()));
                 }
                 itemStack.count -= subtract;
-                // --------------------------------------------------------------------------------------------
 
                 if (items.get(slot).count == 0) {
                     items.set(slot, null);
@@ -196,7 +212,7 @@ public class CustomInventory implements IInventory, Listener, de.Keyle.MyPet.api
         for (int i = 0; i < this.items.size(); i++) {
             ItemStack itemStack = this.items.get(i);
             if (itemStack != null) {
-                TagCompound item = ItemStackNBTConverter.itemStackToCompund(itemStack);
+                TagCompound item = ItemStackNBTConverter.itemStackToCompound(itemStack);
                 item.getCompoundData().put("Slot", new TagByte((byte) i));
                 itemList.add(item);
             }
@@ -211,7 +227,7 @@ public class CustomInventory implements IInventory, Listener, de.Keyle.MyPet.api
         for (int i = 0; i < items.size(); i++) {
             TagCompound itemCompound = items.getTagAs(i, TagCompound.class);
 
-            ItemStack itemStack = ItemStackNBTConverter.compundToItemStack(itemCompound);
+            ItemStack itemStack = ItemStackNBTConverter.compoundToItemStack(itemCompound);
             setItem(itemCompound.getAs("Slot", TagByte.class).getByteData(), itemStack);
         }
     }

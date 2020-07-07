@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -27,6 +27,8 @@ import de.Keyle.MyPet.api.player.MyPetPlayer;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.entity.LivingEntity;
+
+import java.util.UUID;
 
 public interface MyPetMinecraftEntity {
     boolean isMyPet();
@@ -70,4 +72,10 @@ public interface MyPetMinecraftEntity {
     void showPotionParticles(Color color);
 
     void hidePotionParticles();
+
+    void setSitting(boolean sitting);
+
+    boolean isSitting();
+
+    UUID getUniqueID();
 }

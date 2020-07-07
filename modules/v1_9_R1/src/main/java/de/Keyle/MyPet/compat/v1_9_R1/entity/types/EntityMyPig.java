@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2020 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -26,7 +26,7 @@ import de.Keyle.MyPet.api.entity.EntitySize;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.types.MyPig;
 import de.Keyle.MyPet.compat.v1_9_R1.entity.EntityMyPet;
-import de.Keyle.MyPet.skill.skills.Ride;
+import de.Keyle.MyPet.skill.skills.RideImpl;
 import net.minecraft.server.v1_9_R1.*;
 import org.bukkit.craftbukkit.v1_9_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
@@ -34,8 +34,9 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 @EntitySize(width = 0.7F, height = 0.9F)
 public class EntityMyPig extends EntityMyPet {
-    private static final DataWatcherObject<Boolean> ageWatcher = DataWatcher.a(EntityMyPig.class, DataWatcherRegistry.h);
-    private static final DataWatcherObject<Boolean> saddleWatcher = DataWatcher.a(EntityMyPig.class, DataWatcherRegistry.h);
+
+    private static final DataWatcherObject<Boolean> AGE_WATCHER = DataWatcher.a(EntityMyPig.class, DataWatcherRegistry.h);
+    private static final DataWatcherObject<Boolean> SADDLE_WATCHER = DataWatcher.a(EntityMyPig.class, DataWatcherRegistry.h);
 
     public EntityMyPig(World world, MyPet myPet) {
         super(world, myPet);
@@ -79,7 +80,7 @@ public class EntityMyPig extends EntityMyPet {
 
         if (isMyPet() && myPet.getOwner().equals(entityhuman)) {
             if (Configuration.Skilltree.Skill.Ride.RIDE_ITEM.compare(itemStack)) {
-                if (myPet.getSkills().isSkillActive(Ride.class) && canMove()) {
+                if (myPet.getSkills().isActive(RideImpl.class) && canMove()) {
                     if (itemStack != null && itemStack.getItem() == Items.LEAD) {
                         ((WorldServer) this.world).getTracker().a(this, new PacketPlayOutAttachEntity(this, null));
                         entityhuman.a(EnumHand.MAIN_HAND, null);
@@ -95,7 +96,7 @@ public class EntityMyPig extends EntityMyPet {
                             }
                         }.runTaskLater(MyPetApi.getPlugin(), 5);
                     }
-                    getMyPet().getOwner().sendMessage("Ironically pigs can not be ridden right now (Minecraft 1.9 problem)");
+                    getOwner().sendMessage("Unfortunately, pigs can not be ridden (Minecraft limitation)", 5000);
                     return true;
                 }
             }
@@ -142,14 +143,14 @@ public class EntityMyPig extends EntityMyPet {
 
     protected void initDatawatcher() {
         super.initDatawatcher();
-        this.datawatcher.register(ageWatcher, false);    // age
-        this.datawatcher.register(saddleWatcher, false); // saddle
+        this.datawatcher.register(AGE_WATCHER, false);
+        this.datawatcher.register(SADDLE_WATCHER, false); // saddle
     }
 
     @Override
     public void updateVisuals() {
-        this.datawatcher.set(ageWatcher, getMyPet().isBaby());
-        this.datawatcher.set(saddleWatcher, getMyPet().hasSaddle());
+        this.datawatcher.set(AGE_WATCHER, getMyPet().isBaby());
+        this.datawatcher.set(SADDLE_WATCHER, getMyPet().hasSaddle());
     }
 
     public void playPetStepSound() {

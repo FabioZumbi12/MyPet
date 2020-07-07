@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -21,25 +21,29 @@
 package de.Keyle.MyPet.compat.v1_8_R2.skill.skills.ranged.bukkit;
 
 import de.Keyle.MyPet.api.entity.MyPetBukkitEntity;
-import de.Keyle.MyPet.api.skill.skills.ranged.CraftMyPetProjectile;
-import de.Keyle.MyPet.api.skill.skills.ranged.EntityMyPetProjectile;
+import de.Keyle.MyPet.api.entity.MyPetMinecraftEntity;
+import de.Keyle.MyPet.api.entity.skill.ranged.CraftMyPetProjectile;
+import de.Keyle.MyPet.api.entity.skill.ranged.EntityMyPetProjectile;
+import de.Keyle.MyPet.api.util.Compat;
+import de.Keyle.MyPet.api.util.DoNotUse;
 import net.minecraft.server.v1_8_R2.EntityWitherSkull;
 import org.bukkit.craftbukkit.v1_8_R2.CraftServer;
 import org.bukkit.craftbukkit.v1_8_R2.entity.CraftWitherSkull;
 import org.bukkit.entity.LivingEntity;
 
+@Compat("v1_8_R2")
 public class CraftMyPetWitherSkull extends CraftWitherSkull implements CraftMyPetProjectile {
 
     public CraftMyPetWitherSkull(CraftServer server, EntityWitherSkull entity) {
         super(server, entity);
     }
 
-    @Deprecated
+    @DoNotUse
     public LivingEntity _INVALID_getShooter() {
         return (LivingEntity) super.getShooter();
     }
 
-    @Deprecated
+    @DoNotUse
     public void _INVALID_setShooter(LivingEntity shooter) {
         super.setShooter(shooter);
     }
@@ -50,6 +54,7 @@ public class CraftMyPetWitherSkull extends CraftWitherSkull implements CraftMyPe
 
     @Override
     public MyPetBukkitEntity getShootingMyPet() {
-        return getMyPetProjectile().getShooter().getBukkitEntity();
+        MyPetMinecraftEntity shooter = getMyPetProjectile().getShooter();
+        return shooter != null ? shooter.getBukkitEntity() : null;
     }
 }

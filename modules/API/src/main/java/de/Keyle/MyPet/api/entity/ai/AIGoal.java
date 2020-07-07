@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -20,19 +20,19 @@
 
 package de.Keyle.MyPet.api.entity.ai;
 
-public abstract class AIGoal {
-    public abstract boolean shouldStart();
+public interface AIGoal {
+    boolean shouldStart();
 
-    public boolean shouldFinish() {
+    default boolean shouldFinish() {
         return !shouldStart();
     }
 
-    public void start() {
+    default void start() {
     }
 
-    public void finish() {
+    default void finish() {
     }
 
-    public void tick() {
+    default void tick() {
     }
 }

@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -76,24 +76,25 @@ public class EntityMyChicken extends EntityMyPet {
 
     protected void initDatawatcher() {
         super.initDatawatcher();
-        this.datawatcher.a(12, new Integer(0)); // age
+        this.datawatcher.a(12, 0); // age
     }
 
     @Override
     public void updateVisuals() {
         if (getMyPet().isBaby()) {
-            this.datawatcher.watch(12, Integer.valueOf(Integer.MIN_VALUE));
+            this.datawatcher.watch(12, Integer.MIN_VALUE);
         } else {
-            this.datawatcher.watch(12, new Integer(0));
+            this.datawatcher.watch(12, 0);
         }
     }
 
     public void onLivingUpdate() {
         super.onLivingUpdate();
 
-        if (!this.onGround && this.motY < 0.0D) {
-            this.motY *= 0.6D;
-        }
+        if (Configuration.MyPet.Chicken.CAN_GLIDE)
+            if (!this.onGround && this.motY < 0.0D) {
+                this.motY *= 0.6D;
+            }
 
         if (Configuration.MyPet.Chicken.CAN_LAY_EGGS && canUseItem() && --nextEggTimer <= 0) {
             world.makeSound(this, "mob.chicken.plop", 1.0F, (random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F);
@@ -114,5 +115,8 @@ public class EntityMyChicken extends EntityMyPet {
      * -> disable falldamage
      */
     public void b(float f) {
+        if (!Configuration.MyPet.Chicken.CAN_GLIDE) {
+            super.b(f);
+        }
     }
 }

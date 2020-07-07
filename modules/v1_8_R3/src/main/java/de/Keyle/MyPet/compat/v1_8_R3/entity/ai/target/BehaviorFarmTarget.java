@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -24,9 +24,10 @@ import de.Keyle.MyPet.MyPetApi;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.ai.AIGoal;
 import de.Keyle.MyPet.api.entity.ai.target.TargetPriority;
-import de.Keyle.MyPet.api.skill.skills.BehaviorInfo.BehaviorState;
+import de.Keyle.MyPet.api.skill.skills.Behavior;
+import de.Keyle.MyPet.api.skill.skills.Behavior.BehaviorMode;
+import de.Keyle.MyPet.api.util.Compat;
 import de.Keyle.MyPet.compat.v1_8_R3.entity.EntityMyPet;
-import de.Keyle.MyPet.skill.skills.Behavior;
 import net.minecraft.server.v1_8_R3.EntityLiving;
 import net.minecraft.server.v1_8_R3.EntityMonster;
 import net.minecraft.server.v1_8_R3.EntityPlayer;
@@ -34,27 +35,25 @@ import org.bukkit.craftbukkit.v1_8_R3.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.entity.LivingEntity;
 
-public class BehaviorFarmTarget extends AIGoal {
+@Compat("v1_8_R3")
+public class BehaviorFarmTarget implements AIGoal {
     private MyPet myPet;
     private EntityMyPet petEntity;
     private EntityPlayer petOwnerEntity;
     private EntityLiving target;
     private float range;
-    private Behavior behaviorSkill = null;
 
     public BehaviorFarmTarget(EntityMyPet petEntity, float range) {
         this.petEntity = petEntity;
         this.petOwnerEntity = ((CraftPlayer) petEntity.getOwner().getPlayer()).getHandle();
         this.myPet = petEntity.getMyPet();
         this.range = range;
-        if (myPet.getSkills().hasSkill(Behavior.class)) {
-            behaviorSkill = myPet.getSkills().getSkill(Behavior.class).get();
-        }
     }
 
     @Override
     public boolean shouldStart() {
-        if (behaviorSkill == null || !behaviorSkill.isActive() || behaviorSkill.getBehavior() != BehaviorState.Farm) {
+        Behavior behaviorSkill = myPet.getSkills().get(Behavior.class);
+        if (!behaviorSkill.isActive() || behaviorSkill.getBehavior() != BehaviorMode.Farm) {
             return false;
         }
         if (myPet.getDamage() <= 0 && myPet.getRangedDamage() <= 0) {
@@ -67,12 +66,11 @@ public class BehaviorFarmTarget extends AIGoal {
             return false;
         }
 
-        for (Object entityObj : this.petEntity.world.a(EntityMonster.class, this.petOwnerEntity.getBoundingBox().grow((double) range, (double) range, (double) range))) {
-            EntityMonster entityMonster = (EntityMonster) entityObj;
+        for (EntityMonster entityMonster : this.petEntity.world.a(EntityMonster.class, this.petOwnerEntity.getBoundingBox().grow((double) range, (double) range, (double) range))) {
             if (!entityMonster.isAlive() || petEntity.h(entityMonster) > 91) {
                 continue;
             }
-            if (!MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), entityMonster.getBukkitEntity())) {
+            if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), entityMonster.getBukkitEntity())) {
                 continue;
             }
             this.target = entityMonster;
@@ -93,7 +91,9 @@ public class BehaviorFarmTarget extends AIGoal {
 
         if (!target.isAlive()) {
             return true;
-        } else if (behaviorSkill.getBehavior() != BehaviorState.Farm) {
+        }
+        Behavior behaviorSkill = myPet.getSkills().get(Behavior.class);
+        if (behaviorSkill.getBehavior() != BehaviorMode.Farm) {
             return true;
         } else if (myPet.getDamage() <= 0 && myPet.getRangedDamage() <= 0) {
             return true;

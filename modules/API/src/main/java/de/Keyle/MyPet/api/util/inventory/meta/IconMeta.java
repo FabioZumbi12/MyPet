@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -22,6 +22,8 @@ package de.Keyle.MyPet.api.util.inventory.meta;
 
 import de.keyle.knbt.TagCompound;
 
-public interface IconMeta {
+public interface IconMeta extends Cloneable {
     void applyTo(TagCompound tag);
+
+    IconMeta clone();
 }

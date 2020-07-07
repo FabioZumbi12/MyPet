@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -21,12 +21,15 @@
 package de.Keyle.MyPet.compat.v1_9_R1.skill.skills.ranged.bukkit;
 
 import de.Keyle.MyPet.api.entity.MyPetBukkitEntity;
-import de.Keyle.MyPet.api.skill.skills.ranged.CraftMyPetProjectile;
-import de.Keyle.MyPet.api.skill.skills.ranged.EntityMyPetProjectile;
+import de.Keyle.MyPet.api.entity.MyPetMinecraftEntity;
+import de.Keyle.MyPet.api.entity.skill.ranged.CraftMyPetProjectile;
+import de.Keyle.MyPet.api.entity.skill.ranged.EntityMyPetProjectile;
+import de.Keyle.MyPet.api.util.Compat;
 import net.minecraft.server.v1_9_R1.EntityEgg;
 import org.bukkit.craftbukkit.v1_9_R1.CraftServer;
 import org.bukkit.craftbukkit.v1_9_R1.entity.CraftEgg;
 
+@Compat("v1_9_R1")
 public class CraftMyPetEgg extends CraftEgg implements CraftMyPetProjectile {
 
     public CraftMyPetEgg(CraftServer server, EntityEgg entity) {
@@ -39,6 +42,7 @@ public class CraftMyPetEgg extends CraftEgg implements CraftMyPetProjectile {
 
     @Override
     public MyPetBukkitEntity getShootingMyPet() {
-        return getMyPetProjectile().getShooter().getBukkitEntity();
+        MyPetMinecraftEntity shooter = getMyPetProjectile().getShooter();
+        return shooter != null ? shooter.getBukkitEntity() : null;
     }
 }

@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -22,10 +22,8 @@ package de.Keyle.MyPet.api.entity.types;
 
 import de.Keyle.MyPet.api.entity.DefaultInfo;
 import de.Keyle.MyPet.api.entity.MyPet;
-import de.Keyle.MyPet.api.entity.MyPetSlimeSize;
+import de.Keyle.MyPet.api.entity.MyPetSize;
 
-import static org.bukkit.Material.REDSTONE;
-
-@DefaultInfo(food = {REDSTONE})
-public interface MyMagmaCube extends MyPet, MyPetSlimeSize {
+@DefaultInfo(food = {"redstone"})
+public interface MyMagmaCube extends MyPet, MyPetSize {
 }

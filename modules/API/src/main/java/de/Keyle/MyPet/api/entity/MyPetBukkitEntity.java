@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -32,6 +32,10 @@ public interface MyPetBukkitEntity extends Creature {
 
     boolean canMove();
 
+    void setSitting(boolean sitting);
+
+    boolean isSitting();
+
     MyPetType getPetType();
 
     MyPetPlayer getOwner();
@@ -40,7 +44,6 @@ public interface MyPetBukkitEntity extends Creature {
 
     void setTarget(LivingEntity target, TargetPriority priority);
 
-    @Deprecated
     void setTarget(LivingEntity target);
 
     void forgetTarget();

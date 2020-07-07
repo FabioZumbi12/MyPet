@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -21,6 +21,7 @@
 package de.Keyle.MyPet.api.util.locale;
 
 import de.Keyle.MyPet.MyPetApi;
+import de.Keyle.MyPet.api.Configuration;
 import de.Keyle.MyPet.api.player.MyPetPlayer;
 import de.Keyle.MyPet.api.util.Colorizer;
 import org.bukkit.command.CommandSender;
@@ -29,7 +30,6 @@ import org.bukkit.entity.Player;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.PropertyResourceBundle;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -76,6 +76,10 @@ public class Translation {
         if (instance == null) {
             return key;
         }
+        if (!Configuration.Misc.OVERWRITE_LANGUAGE.equalsIgnoreCase("")) {
+            localeString = Configuration.Misc.OVERWRITE_LANGUAGE;
+        }
+
         return instance.getText(key, localeString);
     }
 
@@ -103,23 +107,20 @@ public class Translation {
         return Colorizer.setColors(translatedPhrase);
     }
 
-    public static ResourceBundle loadLocale(String localeString) {
+    public static TranslationBundle loadLocale(String localeString) {
 
         JarFile jarFile;
         try {
             jarFile = new JarFile(MyPetApi.getPlugin().getFile());
         } catch (IOException ignored) {
-            return null;
+            return new TranslationBundle();
         }
 
-        ResourceBundle newLocale = null;
+        TranslationBundle newLocale = new TranslationBundle();
         try {
             JarEntry jarEntry = jarFile.getJarEntry("locale/MyPet_" + localeString + ".properties");
             if (jarEntry != null) {
-                java.util.ResourceBundle defaultBundle = new PropertyResourceBundle(new InputStreamReader(jarFile.getInputStream(jarEntry), "UTF-8"));
-                newLocale = new ResourceBundle(defaultBundle);
-            } else {
-                throw new IOException();
+                newLocale.load(new InputStreamReader(jarFile.getInputStream(jarEntry), "UTF-8"));
             }
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
@@ -128,12 +129,8 @@ public class Translation {
 
         File localeFile = new File(MyPetApi.getPlugin().getDataFolder() + File.separator + "locale" + File.separator + "MyPet_" + localeString + ".properties");
         if (localeFile.exists()) {
-            if (newLocale == null) {
-                newLocale = new ResourceBundle();
-            }
             try {
-                java.util.ResourceBundle optionalBundle = new PropertyResourceBundle(new InputStreamReader(new FileInputStream(localeFile), "UTF-8"));
-                newLocale.addExtensionBundle(optionalBundle);
+                newLocale.load(new InputStreamReader(new FileInputStream(localeFile), "UTF-8"));
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2020 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -23,12 +23,14 @@ package de.Keyle.MyPet.compat.v1_8_R3.entity.ai.movement;
 import de.Keyle.MyPet.MyPetApi;
 import de.Keyle.MyPet.api.entity.ai.AIGoal;
 import de.Keyle.MyPet.api.entity.ai.navigation.AbstractNavigation;
+import de.Keyle.MyPet.api.util.Compat;
 import de.Keyle.MyPet.compat.v1_8_R3.entity.EntityMyPet;
 import net.minecraft.server.v1_8_R3.*;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 
-public class FollowOwner extends AIGoal {
+@Compat("v1_8_R3")
+public class FollowOwner implements AIGoal {
     private EntityMyPet petEntity;
     private AbstractNavigation nav;
     private int setPathTimer = 0;
@@ -37,6 +39,7 @@ public class FollowOwner extends AIGoal {
     private float teleportDistance;
     private Control controlPathfinderGoal;
     private EntityPlayer owner;
+    private boolean waitForGround = false;
 
     public FollowOwner(EntityMyPet entityMyPet, double startDistance, float stopDistance, float teleportDistance) {
         this.petEntity = entityMyPet;
@@ -107,14 +110,32 @@ public class FollowOwner extends AIGoal {
         this.petEntity.getControllerLook().a(owner, 10.0F, (float) this.petEntity.bQ());
 
         if (this.petEntity.canMove()) {
+            if (!owner.abilities.isFlying) {
+                if (!waitForGround) {
+                    if (owner.fallDistance <= 4) {
+                        if (this.petEntity.h(owner) >= this.teleportDistance) {
+                            if (controlPathfinderGoal.moveTo == null) {
+                                if (!petEntity.hasTarget()) {
+                                    if (MyPetApi.getPlatformHelper().canSpawn(ownerLocation, this.petEntity)) {
+                                        this.petEntity.fallDistance = 0;
+                                        this.petEntity.setPositionRotation(ownerLocation.getX(), ownerLocation.getY(), ownerLocation.getZ(), this.petEntity.yaw, this.petEntity.pitch);
+                                        this.setPathTimer = 0;
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (owner.onGround) {
+                    waitForGround = false;
+                }
+            } else {
+                waitForGround = true;
+            }
+
             if (--this.setPathTimer <= 0) {
                 this.setPathTimer = 10;
-                if (!this.nav.navigateTo(owner.getBukkitEntity())) {
-                    if (owner.onGround && this.petEntity.h(owner) >= this.teleportDistance && controlPathfinderGoal.moveTo == null && !petEntity.hasTarget() && MyPetApi.getPlatformHelper().canSpawn(ownerLocation, this.petEntity)) {
-                        this.petEntity.setPositionRotation(ownerLocation.getX(), ownerLocation.getY(), ownerLocation.getZ(), this.petEntity.yaw, this.petEntity.pitch);
-                        this.nav.navigateTo(owner.getBukkitEntity());
-                    }
-                } else {
+                if (this.nav.navigateTo(owner.getBukkitEntity())) {
                     applyWalkSpeed();
                 }
             }
@@ -131,7 +152,7 @@ public class FollowOwner extends AIGoal {
             if (owner.getAttributeMap().a(GenericAttributes.MOVEMENT_SPEED) != null) {
                 walkSpeed += owner.getAttributeMap().a(GenericAttributes.MOVEMENT_SPEED).getValue();
             }
-        } else if (owner.vehicle != null && owner.vehicle instanceof EntityLiving) {
+        } else if (owner.vehicle instanceof EntityLiving) {
             // adjust the speed to the pet can catch up with the vehicle the player is in
             AttributeInstance vehicleSpeedAttribute = ((EntityLiving) owner.vehicle).getAttributeMap().a(GenericAttributes.MOVEMENT_SPEED);
             if (vehicleSpeedAttribute != null) {

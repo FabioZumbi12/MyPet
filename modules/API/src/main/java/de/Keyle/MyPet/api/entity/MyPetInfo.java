@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -22,6 +22,7 @@ package de.Keyle.MyPet.api.entity;
 
 import com.google.common.collect.ArrayListMultimap;
 import de.Keyle.MyPet.api.util.ConfigItem;
+import de.Keyle.MyPet.api.util.configuration.settings.Settings;
 import org.bukkit.entity.EntityType;
 
 import java.util.HashMap;
@@ -29,12 +30,15 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class MyPetInfo {
+
     private Map<MyPetType, Double> startHP = new HashMap<>();
     private Map<MyPetType, Double> startSpeed = new HashMap<>();
     private ArrayListMultimap<MyPetType, ConfigItem> food = ArrayListMultimap.create();
-    private ArrayListMultimap<MyPetType, LeashFlag> leashFlags = ArrayListMultimap.create();
+    private ArrayListMultimap<MyPetType, Settings> leashFlagSettings = ArrayListMultimap.create();
     private Map<MyPetType, Integer> customRespawnTimeFactor = new HashMap<>();
     private Map<MyPetType, Integer> customRespawnTimeFixed = new HashMap<>();
+    private Map<MyPetType, Boolean> releaseOnDeath = new HashMap<>();
+    private Map<MyPetType, Boolean> removeAfterRelease = new HashMap<>();
     private Map<MyPetType, ConfigItem> leashItem = new HashMap<>();
 
     public int getCustomRespawnTimeFactor(MyPetType type) {
@@ -63,7 +67,11 @@ public abstract class MyPetInfo {
         return food.get(type);
     }
 
-    public void setFood(MyPetType type, ConfigItem foodToAdd) {
+    public void clearFood(MyPetType type) {
+        food.removeAll(type);
+    }
+
+    public void addFood(MyPetType type, ConfigItem foodToAdd) {
         for (ConfigItem configItem : food.get(type)) {
             if (configItem.compare(foodToAdd.getItem())) {
                 return;
@@ -72,17 +80,19 @@ public abstract class MyPetInfo {
         food.put(type, foodToAdd);
     }
 
-    public boolean hasLeashFlag(MyPetType type, LeashFlag flag) {
-        return leashFlags.get(type).contains(flag);
+    public List<Settings> getLeashFlagSettings(MyPetType type) {
+        return leashFlagSettings.get(type);
     }
 
-    public List<LeashFlag> getLeashFlags(MyPetType type) {
-        return leashFlags.get(type);
+    public void addLeashFlagSetting(MyPetType type, Settings setting) {
+        if (!leashFlagSettings.get(type).contains(setting)) {
+            leashFlagSettings.put(type, setting);
+        }
     }
 
-    public void setLeashFlags(MyPetType type, LeashFlag leashFlagToAdd) {
-        if (!leashFlags.get(type).contains(leashFlagToAdd)) {
-            leashFlags.put(type, leashFlagToAdd);
+    public void clearLeashFlagSettings(MyPetType petType) {
+        if (leashFlagSettings.containsKey(petType)) {
+            leashFlagSettings.get(petType).clear();
         }
     }
 
@@ -117,4 +127,26 @@ public abstract class MyPetInfo {
     }
 
     public abstract boolean isLeashableEntityType(EntityType type);
+
+    public void setReleaseOnDeath(MyPetType myPetType, boolean releaseOnDeath) {
+        this.releaseOnDeath.put(myPetType, releaseOnDeath);
+    }
+
+    public void setRemoveAfterRelease(MyPetType myPetType, boolean removeAfterRelease) {
+        this.removeAfterRelease.put(myPetType, removeAfterRelease);
+    }
+
+    public boolean getReleaseOnDeath(MyPetType myPetType) {
+        if (myPetType != null && releaseOnDeath.containsKey(myPetType)) {
+            return releaseOnDeath.get(myPetType);
+        }
+        return false;
+    }
+
+    public boolean getRemoveAfterRelease(MyPetType myPetType) {
+        if (myPetType != null && removeAfterRelease.containsKey(myPetType)) {
+            return removeAfterRelease.get(myPetType);
+        }
+        return false;
+    }
 }

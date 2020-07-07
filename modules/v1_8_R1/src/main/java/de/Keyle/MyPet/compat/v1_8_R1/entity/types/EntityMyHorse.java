@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -31,10 +31,9 @@ import org.bukkit.craftbukkit.v1_8_R1.inventory.CraftItemStack;
 
 @EntitySize(width = 1.4F, height = 1.6F)
 public class EntityMyHorse extends EntityMyPet {
+
     int soundCounter = 0;
     int rearCounter = -1;
-    int ageCounter = -1;
-    int ageFailCounter = 1;
 
     public EntityMyHorse(World world, MyPet myPet) {
         super(world, myPet);
@@ -51,9 +50,9 @@ public class EntityMyHorse extends EntityMyPet {
     private void applyVisual(int value, boolean flag) {
         int i = this.datawatcher.getInt(16);
         if (flag) {
-            this.datawatcher.watch(16, Integer.valueOf(i | value));
+            this.datawatcher.watch(16, i | value);
         } else {
-            this.datawatcher.watch(16, Integer.valueOf(i & (~value)));
+            this.datawatcher.watch(16, i & (~value));
         }
     }
 
@@ -190,17 +189,8 @@ public class EntityMyHorse extends EntityMyPet {
                         entityhuman.inventory.setItem(entityhuman.inventory.itemInHandIndex, null);
                     }
                 }
-                getMyPet().setAge(getMyPet().getAge() + 3000);
+                getMyPet().setBaby(false);
                 return true;
-            }
-            if (itemStack.getItem() == Items.BREAD ||
-                    itemStack.getItem() == Items.WHEAT ||
-                    itemStack.getItem() == Items.GOLDEN_APPLE ||
-                    itemStack.getItem() == Item.getItemOf(Blocks.HAY_BLOCK) ||
-                    itemStack.getItem() == Items.GOLDEN_CARROT ||
-                    itemStack.getItem() == Items.APPLE ||
-                    itemStack.getItem() == Items.SUGAR) {
-                ageCounter = 5;
             }
         }
         return false;
@@ -217,39 +207,35 @@ public class EntityMyHorse extends EntityMyPet {
 
     protected void initDatawatcher() {
         super.initDatawatcher();
-        this.datawatcher.a(12, Byte.valueOf((byte) 0)); // age
-        this.datawatcher.a(16, Integer.valueOf(0));     // saddle & chest
-        this.datawatcher.a(19, Byte.valueOf((byte) 0)); // horse type
-        this.datawatcher.a(20, Integer.valueOf(0));     // variant
-        this.datawatcher.a(21, String.valueOf(""));     // N/A
-        this.datawatcher.a(22, Integer.valueOf(0));     // armor
+        this.datawatcher.a(12, (byte) 0);           // age
+        this.datawatcher.a(16, 0);                  // saddle & chest
+        this.datawatcher.a(19, (byte) 0);           // horse type
+        this.datawatcher.a(20, 0);                  // variant
+        this.datawatcher.a(21, String.valueOf("")); // N/A
+        this.datawatcher.a(22, 0);                  // armor
     }
 
     @Override
     public void updateVisuals() {
         if (getMyPet().isBaby()) {
-            this.datawatcher.watch(12, Byte.valueOf((byte) MathHelper.clamp(-24000, -1, 1)));
+            this.datawatcher.watch(12, (byte) MathHelper.clamp(-24000, -1, 1));
         } else {
-            this.datawatcher.watch(12, new Byte((byte) 0));
+            this.datawatcher.watch(12, (byte) 0);
         }
-        this.datawatcher.watch(12, Byte.valueOf((byte) MathHelper.clamp(getMyPet().getAge(), -1, 1)));
-        this.datawatcher.watch(22, Integer.valueOf(getHorseArmorId(getMyPet().getArmor())));
-        this.datawatcher.watch(19, Byte.valueOf(getMyPet().getHorseType()));
-        this.datawatcher.watch(20, Integer.valueOf(getMyPet().getVariant()));
+        this.datawatcher.watch(22, getHorseArmorId(getMyPet().getArmor()));
+        this.datawatcher.watch(19, getMyPet().getHorseType());
+        this.datawatcher.watch(20, getMyPet().getVariant());
         applyVisual(8, getMyPet().hasChest());
         applyVisual(4, getMyPet().hasSaddle());
     }
 
     public void onLivingUpdate() {
         super.onLivingUpdate();
-        if (rearCounter > -1 && rearCounter-- == 0) {
-            applyVisual(64, false);
-            rearCounter = -1;
-        }
-        if (ageCounter > -1 && ageCounter-- == 0) {
-            this.datawatcher.watch(12, Byte.valueOf((byte) MathHelper.clamp(getMyPet().getAge() + ageFailCounter++, -1, 1)));
-            ageCounter = -1;
-            ageFailCounter %= 1000;
+        if (!hasRider) {
+            if (rearCounter > -1 && rearCounter-- == 0) {
+                applyVisual(64, false);
+                rearCounter = -1;
+            }
         }
     }
 

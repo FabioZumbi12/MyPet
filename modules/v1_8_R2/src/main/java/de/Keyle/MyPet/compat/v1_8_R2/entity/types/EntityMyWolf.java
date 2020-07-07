@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -25,16 +25,15 @@ import de.Keyle.MyPet.api.entity.EntitySize;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.types.MyWolf;
 import de.Keyle.MyPet.compat.v1_8_R2.entity.EntityMyPet;
-import de.Keyle.MyPet.compat.v1_8_R2.entity.ai.movement.Sit;
 import net.minecraft.server.v1_8_R2.*;
 import org.bukkit.DyeColor;
 
 @EntitySize(width = 0.6F, height = 0.64f)
 public class EntityMyWolf extends EntityMyPet {
+
     protected boolean shaking;
     protected boolean isWet;
     protected float shakeCounter;
-    private Sit sitPathfinder;
 
     public EntityMyWolf(World world, MyPet myPet) {
         super(world, myPet);
@@ -47,10 +46,6 @@ public class EntityMyWolf extends EntityMyPet {
         } else {
             this.datawatcher.watch(16, (byte) (i & 0xFFFFFFFE));
         }
-    }
-
-    public boolean canMove() {
-        return !sitPathfinder.isSitting();
     }
 
     @Override
@@ -101,28 +96,26 @@ public class EntityMyWolf extends EntityMyPet {
                     return true;
                 }
             }
-            this.sitPathfinder.toogleSitting();
-            return true;
         }
         return false;
     }
 
     protected void initDatawatcher() {
         super.initDatawatcher();
-        this.datawatcher.a(12, new Byte((byte) 0));         // age
-        this.datawatcher.a(16, new Byte((byte) 0));     // tamed/angry/sitting
-        this.datawatcher.a(17, "");                     // wolf owner name
-        this.datawatcher.a(18, new Float(getHealth())); // tail height
-        this.datawatcher.a(19, new Byte((byte) 0));     // N/A
-        this.datawatcher.a(20, new Byte((byte) 14));    // collar color
+        this.datawatcher.a(12, (byte) 0);  // age
+        this.datawatcher.a(16, (byte) 0);  // tamed/angry/sitting
+        this.datawatcher.a(17, "");        // wolf owner name
+        this.datawatcher.a(18, 30F);       // tail height
+        this.datawatcher.a(19, (byte) 0);  // N/A
+        this.datawatcher.a(20, (byte) 14); // collar color
     }
 
     @Override
     public void updateVisuals() {
         if (getMyPet().isBaby()) {
-            this.datawatcher.watch(12, Byte.valueOf(Byte.MIN_VALUE));
+            this.datawatcher.watch(12, Byte.MIN_VALUE);
         } else {
-            this.datawatcher.watch(12, new Byte((byte) 0));
+            this.datawatcher.watch(12, (byte) 0);
         }
 
         int i = this.datawatcher.getByte(16);
@@ -180,7 +173,7 @@ public class EntityMyWolf extends EntityMyPet {
             }
         }
 
-        float tailHeight = 25.F * getHealth() / getMaxHealth();
+        float tailHeight = 30F * getHealth() / getMaxHealth();
         if (this.datawatcher.getFloat(18) != tailHeight) {
             this.datawatcher.watch(18, tailHeight); // update tail height
         }
@@ -193,16 +186,11 @@ public class EntityMyWolf extends EntityMyPet {
 
     public void setHealth(float i) {
         super.setHealth(i);
-        this.datawatcher.watch(18, Float.valueOf(i));
+        float tailHeight = 30F * getHealth() / getMaxHealth();
+        this.datawatcher.watch(18, tailHeight); // update tail height
     }
 
     public MyWolf getMyPet() {
         return (MyWolf) myPet;
-    }
-
-    public void setPathfinder() {
-        super.setPathfinder();
-        sitPathfinder = new Sit(this);
-        petPathfinderSelector.addGoal("Sit", 2, sitPathfinder);
     }
 }

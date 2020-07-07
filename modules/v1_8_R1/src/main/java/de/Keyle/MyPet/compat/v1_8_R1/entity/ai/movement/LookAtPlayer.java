@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -21,10 +21,12 @@
 package de.Keyle.MyPet.compat.v1_8_R1.entity.ai.movement;
 
 import de.Keyle.MyPet.api.entity.ai.AIGoal;
+import de.Keyle.MyPet.api.util.Compat;
 import de.Keyle.MyPet.compat.v1_8_R1.entity.EntityMyPet;
 import net.minecraft.server.v1_8_R1.Entity;
 
-public class LookAtPlayer extends AIGoal {
+@Compat("v1_8_R1")
+public class LookAtPlayer implements AIGoal {
     private EntityMyPet petEntity;
     protected Entity targetPlayer;
     private float range;

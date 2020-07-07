@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -80,8 +80,6 @@ public class ConfigurationNBT {
                 return false;
             }
 
-        } catch (FileNotFoundException e) {
-            return false;
         } catch (IOException e) {
             return false;
         }

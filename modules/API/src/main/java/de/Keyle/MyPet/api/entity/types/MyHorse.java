@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -25,14 +25,9 @@ import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.MyPetBaby;
 import org.bukkit.inventory.ItemStack;
 
-import static de.Keyle.MyPet.api.entity.LeashFlag.Tamed;
-import static org.bukkit.Material.*;
 
-@DefaultInfo(food = {SUGAR, WHEAT, APPLE}, leashFlags = {Tamed})
+@DefaultInfo(food = {"sugar", "wheat", "apple"}, leashFlags = {"Tamed"})
 public interface MyHorse extends MyPet, MyPetBaby {
-    int getAge();
-
-    void setAge(int value);
 
     ItemStack getArmor();
 

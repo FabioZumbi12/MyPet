@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -31,6 +31,7 @@ import org.bukkit.craftbukkit.v1_7_R4.inventory.CraftItemStack;
 
 @EntitySize(width = 1.4F, height = 1.6F)
 public class EntityMyHorse extends EntityMyPet {
+
     int soundCounter = 0;
     int rearCounter = -1;
     int ageCounter = -1;
@@ -51,9 +52,9 @@ public class EntityMyHorse extends EntityMyPet {
     private void applyVisual(int value, boolean flag) {
         int i = this.datawatcher.getInt(16);
         if (flag) {
-            this.datawatcher.watch(16, Integer.valueOf(i | value));
+            this.datawatcher.watch(16, i | value);
         } else {
-            this.datawatcher.watch(16, Integer.valueOf(i & (~value)));
+            this.datawatcher.watch(16, i & (~value));
         }
     }
 
@@ -190,7 +191,7 @@ public class EntityMyHorse extends EntityMyPet {
                         entityhuman.inventory.setItem(entityhuman.inventory.itemInHandIndex, null);
                     }
                 }
-                getMyPet().setAge(getMyPet().getAge() + 3000);
+                getMyPet().setBaby(false);
                 return true;
             }
             if (itemStack.getItem() == Items.BREAD ||
@@ -228,7 +229,7 @@ public class EntityMyHorse extends EntityMyPet {
     @Override
     public void updateVisuals() {
         if (getMyPet().isBaby()) {
-            this.datawatcher.watch(12, MathHelper.a(getMyPet().getAge(), -1, 1));
+            this.datawatcher.watch(12, MathHelper.a(-24000, -1, 1));
         } else {
             this.datawatcher.watch(12, 0);
         }
@@ -241,12 +242,14 @@ public class EntityMyHorse extends EntityMyPet {
 
     public void onLivingUpdate() {
         super.onLivingUpdate();
-        if (rearCounter > -1 && rearCounter-- == 0) {
-            applyVisual(64, false);
-            rearCounter = -1;
+        if (!hasRider) {
+            if (rearCounter > -1 && rearCounter-- == 0) {
+                applyVisual(64, false);
+                rearCounter = -1;
+            }
         }
         if (ageCounter > -1 && ageCounter-- == 0) {
-            this.datawatcher.watch(12, MathHelper.a(getMyPet().getAge() + ageFailCounter++, -1, 1));
+            this.datawatcher.watch(12, MathHelper.a(ageFailCounter++, -1, 1));
             ageCounter = -1;
             ageFailCounter %= 1000;
         }

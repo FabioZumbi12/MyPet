@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -24,9 +24,10 @@ import de.Keyle.MyPet.MyPetApi;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.ai.AIGoal;
 import de.Keyle.MyPet.api.entity.ai.target.TargetPriority;
-import de.Keyle.MyPet.api.skill.skills.BehaviorInfo.BehaviorState;
+import de.Keyle.MyPet.api.skill.skills.Behavior;
+import de.Keyle.MyPet.api.skill.skills.Behavior.BehaviorMode;
+import de.Keyle.MyPet.api.util.Compat;
 import de.Keyle.MyPet.compat.v1_7_R4.entity.EntityMyPet;
-import de.Keyle.MyPet.skill.skills.Behavior;
 import net.minecraft.server.v1_7_R4.EntityLiving;
 import net.minecraft.server.v1_7_R4.EntityPlayer;
 import net.minecraft.server.v1_7_R4.EntityTameableAnimal;
@@ -35,27 +36,25 @@ import org.bukkit.craftbukkit.v1_7_R4.entity.CraftPlayer;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
-public class BehaviorAggressiveTarget extends AIGoal {
+@Compat("v1_7_R4")
+public class BehaviorAggressiveTarget implements AIGoal {
     private MyPet myPet;
     private EntityMyPet petEntity;
     private EntityPlayer petOwnerEntity;
     private EntityLiving target;
     private float range;
-    private Behavior behaviorSkill = null;
 
     public BehaviorAggressiveTarget(EntityMyPet petEntity, float range) {
         this.petEntity = petEntity;
         this.myPet = petEntity.getMyPet();
         this.petOwnerEntity = ((CraftPlayer) myPet.getOwner().getPlayer()).getHandle();
         this.range = range;
-        if (myPet.getSkills().hasSkill(Behavior.class)) {
-            behaviorSkill = myPet.getSkills().getSkill(Behavior.class).get();
-        }
     }
 
     @Override
     public boolean shouldStart() {
-        if (behaviorSkill == null || !behaviorSkill.isActive() || behaviorSkill.getBehavior() != BehaviorState.Aggressive) {
+        Behavior behaviorSkill = myPet.getSkills().get(Behavior.class);
+        if (!behaviorSkill.isActive() || behaviorSkill.getBehavior() != BehaviorMode.Aggressive) {
             return false;
         }
         if (myPet.getDamage() <= 0 && myPet.getRangedDamage() <= 0) {
@@ -77,12 +76,12 @@ public class BehaviorAggressiveTarget extends AIGoal {
                     if (myPet.getOwner().equals(targetPlayer)) {
                         continue;
                     }
-                    if (!MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), targetPlayer, true)) {
+                    if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), targetPlayer, true)) {
                         continue;
                     }
                 } else if (entityLiving instanceof EntityMyPet) {
                     MyPet targetMyPet = ((EntityMyPet) entityLiving).getMyPet();
-                    if (!MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), targetMyPet.getOwner().getPlayer(), true)) {
+                    if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), targetMyPet.getOwner().getPlayer(), true)) {
                         continue;
                     }
                 } else if (entityLiving instanceof EntityTameableAnimal) {
@@ -91,12 +90,11 @@ public class BehaviorAggressiveTarget extends AIGoal {
                         Player tameableOwner = (Player) tameable.getOwner().getBukkitEntity();
                         if (myPet.getOwner().equals(tameableOwner)) {
                             continue;
-                        } else if (!MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), tameableOwner, true)) {
+                        } else if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), tameableOwner, true)) {
                             continue;
                         }
                     }
-                }
-                if (!MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), entityLiving.getBukkitEntity())) {
+                } else if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), entityLiving.getBukkitEntity())) {
                     continue;
                 }
                 this.target = entityLiving;
@@ -118,7 +116,9 @@ public class BehaviorAggressiveTarget extends AIGoal {
 
         if (!target.isAlive()) {
             return true;
-        } else if (behaviorSkill.getBehavior() != BehaviorState.Aggressive) {
+        }
+        Behavior behaviorSkill = myPet.getSkills().get(Behavior.class);
+        if (behaviorSkill.getBehavior() != BehaviorMode.Aggressive) {
             return true;
         } else if (myPet.getDamage() <= 0 && myPet.getRangedDamage() <= 0) {
             return true;

@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -20,11 +20,12 @@
 
 package de.Keyle.MyPet.api.entity;
 
-import com.google.common.base.Optional;
 import de.Keyle.MyPet.api.skill.MyPetExperience;
 import de.Keyle.MyPet.api.skill.Skills;
 import de.Keyle.MyPet.api.util.Scheduler;
 import org.bukkit.Location;
+
+import java.util.Optional;
 
 public interface MyPet extends StoredMyPet, Scheduler {
     MyPetExperience getExperience();
@@ -34,12 +35,14 @@ public interface MyPet extends StoredMyPet, Scheduler {
     }
 
     enum SpawnFlags {
-        Success, NoSpace, AlreadyHere, Dead, Canceled, OwnerDead, Flying, Spectator, NotAllowed
+        Success, NoSpace, AlreadyHere, Dead, Canceled, OwnerDead, Flying, Spectator, WrongWorldGroup, NotAllowed, InvalidPosition
     }
 
     void removePet();
 
     void removePet(boolean wantsToRespawn);
+
+    SpawnFlags createEntity();
 
     PetState getStatus();
 
@@ -53,8 +56,6 @@ public interface MyPet extends StoredMyPet, Scheduler {
 
     boolean autoAssignSkilltree();
 
-    SpawnFlags createEntity();
-
     Optional<MyPetBukkitEntity> getEntity();
 
     double getDamage();
@@ -65,5 +66,5 @@ public interface MyPet extends StoredMyPet, Scheduler {
 
     boolean hasTarget();
 
-    void decreaseHunger(double value);
+    void decreaseSaturation(double value);
 }

@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -24,40 +24,39 @@ import de.Keyle.MyPet.MyPetApi;
 import de.Keyle.MyPet.api.entity.MyPetMinecraftEntity;
 import de.Keyle.MyPet.api.player.MyPetPlayer;
 import de.Keyle.MyPet.api.util.Compat;
+import de.Keyle.MyPet.api.util.ReflectionUtil;
+import de.Keyle.MyPet.api.util.inventory.material.ItemDatabase;
+import de.Keyle.MyPet.api.util.inventory.material.MaterialHolder;
 import de.Keyle.MyPet.compat.v1_7_R4.entity.EntityMyPet;
 import de.Keyle.MyPet.compat.v1_7_R4.util.inventory.ItemStackNBTConverter;
 import de.keyle.knbt.TagCompound;
 import net.minecraft.server.v1_7_R4.*;
 import org.apache.commons.lang.Validate;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.craftbukkit.v1_7_R4.CraftWorld;
 import org.bukkit.craftbukkit.v1_7_R4.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_7_R4.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_7_R4.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_7_R4.entity.CraftZombie;
 import org.bukkit.craftbukkit.v1_7_R4.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_7_R4.util.CraftMagicNumbers;
 import org.bukkit.craftbukkit.v1_7_R4.util.UnsafeList;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Zombie;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.UUID;
 
 @Compat("v1_7_R4")
 public class PlatformHelper extends de.Keyle.MyPet.api.PlatformHelper {
-    private static Field goalSelectorField = null;
 
-    static {
-        try {
-            goalSelectorField = EntityInsentient.class.getDeclaredField("goalSelector");
-            goalSelectorField.setAccessible(true);
-
-        } catch (NoSuchFieldException e) {
-            e.printStackTrace();
-        }
-    }
+    private static Field EntityInsentient_goalSelector_FIELD = ReflectionUtil.getField(EntityInsentient.class, "goalSelector");
 
     /**
      * @param location   the {@link Location} around which players must be to see the effect
@@ -69,19 +68,22 @@ public class PlatformHelper extends de.Keyle.MyPet.api.PlatformHelper {
      * @param count      the number of particles
      * @param radius     the radius around the location
      */
-    public void playParticleEffect(Location location, String effectName, float offsetX, float offsetY, float offsetZ, float speed, int count, int radius, int... data) {
+    public void playParticleEffect(Location location, String effectName, float offsetX, float offsetY, float offsetZ, float speed, int count, int radius, de.Keyle.MyPet.api.compat.Compat<Object> data) {
 
         Validate.notNull(location, "Location cannot be null");
         Validate.notNull(effectName, "Effect cannot be null");
         Validate.notNull(location.getWorld(), "World cannot be null");
 
+        if (data != null) {
+            effectName += data.get();
+        }
+
         PacketPlayOutWorldParticles packet = new PacketPlayOutWorldParticles(effectName, (float) location.getX(), (float) location.getY(), (float) location.getZ(), offsetX, offsetY, offsetZ, speed, count);
+        radius = radius * radius;
 
         for (Player player : location.getWorld().getPlayers()) {
-            if (player.getLocation().getWorld() == location.getWorld()) {
-                if ((int) player.getLocation().distance(location) <= radius) {
-                    ((CraftPlayer) player).getHandle().playerConnection.sendPacket(packet);
-                }
+            if (MyPetApi.getPlatformHelper().distanceSquared(player.getLocation(), location) <= radius) {
+                ((CraftPlayer) player).getHandle().playerConnection.sendPacket(packet);
             }
         }
     }
@@ -96,17 +98,20 @@ public class PlatformHelper extends de.Keyle.MyPet.api.PlatformHelper {
      * @param count      the number of particles
      * @param radius     the radius around the location
      */
-    public void playParticleEffect(Player player, Location location, String effectName, float offsetX, float offsetY, float offsetZ, float speed, int count, int radius, int... data) {
+    public void playParticleEffect(Player player, Location location, String effectName, float offsetX, float offsetY, float offsetZ, float speed, int count, int radius, de.Keyle.MyPet.api.compat.Compat<Object> data) {
         Validate.notNull(location, "Location cannot be null");
         Validate.notNull(effectName, "Effect cannot be null");
         Validate.notNull(location.getWorld(), "World cannot be null");
 
-        PacketPlayOutWorldParticles packet = new PacketPlayOutWorldParticles(effectName, (float) location.getX(), (float) location.getY(), (float) location.getZ(), offsetX, offsetY, offsetZ, speed, count);
+        if (data != null) {
+            effectName += data.get();
+        }
 
-        if (player.getLocation().getWorld() == location.getWorld()) {
-            if ((int) player.getLocation().distance(location) <= radius) {
-                ((CraftPlayer) player).getHandle().playerConnection.sendPacket(packet);
-            }
+        PacketPlayOutWorldParticles packet = new PacketPlayOutWorldParticles(effectName, (float) location.getX(), (float) location.getY(), (float) location.getZ(), offsetX, offsetY, offsetZ, speed, count);
+        radius = radius * radius;
+
+        if (MyPetApi.getPlatformHelper().distanceSquared(player.getLocation(), location) <= radius) {
+            ((CraftPlayer) player).getHandle().playerConnection.sendPacket(packet);
         }
     }
 
@@ -152,7 +157,7 @@ public class PlatformHelper extends de.Keyle.MyPet.api.PlatformHelper {
         try {
             Field field = entityPlayer.getClass().getDeclaredField("locale");
             String lang = field.get(entityPlayer).toString();
-            if(lang == null) {
+            if (lang == null) {
                 return "en_US";
             }
             return lang;
@@ -180,12 +185,12 @@ public class PlatformHelper extends de.Keyle.MyPet.api.PlatformHelper {
 
     @Override
     public TagCompound itemStackToCompund(org.bukkit.inventory.ItemStack itemStack) {
-        return ItemStackNBTConverter.itemStackToCompund(itemStack);
+        return ItemStackNBTConverter.itemStackToCompound(itemStack);
     }
 
     @Override
     public org.bukkit.inventory.ItemStack compundToItemStack(TagCompound compound) {
-        return CraftItemStack.asBukkitCopy(ItemStackNBTConverter.compundToItemStack(compound));
+        return CraftItemStack.asBukkitCopy(ItemStackNBTConverter.compoundToItemStack(compound));
     }
 
     public void sendMessageRaw(Player player, String message) {
@@ -199,9 +204,9 @@ public class PlatformHelper extends de.Keyle.MyPet.api.PlatformHelper {
 
     public void addZombieTargetGoal(Zombie zombie) {
         EntityZombie ez = ((CraftZombie) zombie).getHandle();
-        if (goalSelectorField != null) {
+        if (EntityInsentient_goalSelector_FIELD != null) {
             try {
-                PathfinderGoalSelector pgs = (PathfinderGoalSelector) goalSelectorField.get(ez);
+                PathfinderGoalSelector pgs = (PathfinderGoalSelector) EntityInsentient_goalSelector_FIELD.get(ez);
                 pgs.a(3, new PathfinderGoalMeleeAttack(ez, EntityMyPet.class, 1.0D, true));
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
@@ -211,12 +216,11 @@ public class PlatformHelper extends de.Keyle.MyPet.api.PlatformHelper {
 
     @Override
     public boolean comparePlayerWithEntity(MyPetPlayer player, Object obj) {
-        EntityHuman entityHuman = (EntityHuman) obj;
-        if (MyPetApi.getPlugin().isInOnlineMode()) {
-            return player.getPlayerUUID().equals(entityHuman.getUniqueID());
-        } else {
-            return entityHuman.getName().equals(player.getName());
+        if (obj instanceof EntityHuman && player != null && player.getPlayer() != null) {
+            EntityHuman entityHuman = (EntityHuman) obj;
+            return player.getPlayer().getUniqueId().equals(entityHuman.getUniqueID());
         }
+        return false;
     }
 
     @Override
@@ -237,11 +241,27 @@ public class PlatformHelper extends de.Keyle.MyPet.api.PlatformHelper {
                     return true;
                 } else if (itemstack.getItem() instanceof ItemBow) {
                     return true;
+                } else if (itemstack.getItem() instanceof ItemFishingRod) {
+                    return true;
+                } else if (itemstack.getItem() == Items.COMPASS) {
+                    return true;
+                } else if (itemstack.getItem() == Items.WATCH) {
+                    return true;
+                } else if (itemstack.getItem() instanceof ItemCarrotStick) {
+                    return true;
+                } else if (itemstack.getItem() instanceof ItemSign) {
+                    return true;
                 }
                 return false;
             }
             return true;
         }
+    }
+
+    @Override
+    public String getVanillaName(org.bukkit.inventory.ItemStack bukkitItemStack) {
+        ItemStack itemStack = CraftItemStack.asNMSCopy(bukkitItemStack);
+        return itemStack.getItem().a(itemStack) + ".name";
     }
 
     @Override
@@ -251,6 +271,12 @@ public class PlatformHelper extends de.Keyle.MyPet.api.PlatformHelper {
                 ((CraftPlayer) p).getHandle().playerConnection.sendPacket(new PacketPlayOutCollect(target.getEntityId(), entity.getEntityId()));
             }
         }
+    }
+
+    @Override
+    public Entity getEntity(int id, World world) {
+        net.minecraft.server.v1_7_R4.Entity e = ((CraftWorld) world).getHandle().getEntity(id);
+        return e != null ? e.getBukkitEntity() : null;
     }
 
     public org.bukkit.inventory.ItemStack asBukkitItemStack(ItemStack itemStack) {
@@ -263,5 +289,59 @@ public class PlatformHelper extends de.Keyle.MyPet.api.PlatformHelper {
 
     public net.minecraft.server.v1_7_R4.World getWorldNMS(World world) {
         return ((CraftWorld) world).getHandle();
+    }
+
+    public Material getMaterial(MaterialHolder materialHolder) {
+        Material mat = Material.getMaterial(materialHolder.getLegacyId().getId());
+        if (mat == null) {
+            mat = Material.matchMaterial(materialHolder.getLegacyName().getName());
+        }
+        return mat;
+    }
+
+    @Override
+    public void strikeLightning(Location loc, float distance) {
+        WorldServer world = ((CraftWorld) loc.getWorld()).getHandle();
+        EntityLightning lightning = new EntityLightning(world, loc.getX(), loc.getY(), loc.getZ(), true);
+        world.getServer()
+                .getServer()
+                .getPlayerList()
+                .sendPacketNearby(null, loc.getX(), loc.getY(), loc.getZ(), distance, world.dimension,
+                        new PacketPlayOutSpawnEntityWeather(lightning));
+        world.getServer()
+                .getServer()
+                .getPlayerList()
+                .sendPacketNearby(null, loc.getX(), loc.getY(), loc.getZ(), distance, world.dimension,
+                        new PacketPlayOutNamedSoundEffect("ambient.weather.thunder", loc.getX(), loc.getY(), loc.getZ(), distance, 1F));
+    }
+
+    @Override
+    public Entity getEntityByUUID(UUID uuid) {
+        for (World world : Bukkit.getServer().getWorlds()) {
+            for (LivingEntity e : world.getLivingEntities()) {
+                if (e.getUniqueId().equals(uuid)) {
+                    return e;
+                }
+            }
+        }
+        return null;
+    }
+
+    public String getLastDamageSource(LivingEntity e) {
+        EntityLiving el = ((CraftLivingEntity) e).getHandle();
+        if (!(el.combatTracker.b() instanceof ChatMessage)) {
+            return null;
+        }
+        return ((ChatMessage) el.combatTracker.b()).i();
+    }
+
+    @Override
+    public String itemstackToString(org.bukkit.inventory.ItemStack itemStack) {
+        ItemDatabase itemDatabase = MyPetApi.getServiceManager().getService(ItemDatabase.class).get();
+        String itemstack = itemDatabase.getByLegacyId(itemStack.getTypeId(), itemStack.getData().getData()).getId();
+        if (itemStack.hasItemMeta()) {
+            itemstack += " " + CraftItemStack.asNMSCopy(itemStack).getTag().toString();
+        }
+        return itemstack;
     }
 }

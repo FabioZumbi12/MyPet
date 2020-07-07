@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -24,12 +24,17 @@ import de.Keyle.MyPet.api.entity.EquipmentSlot;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.MyPetEquipment;
 import de.Keyle.MyPet.api.entity.ai.AIGoal;
+import de.Keyle.MyPet.api.skill.skills.Behavior;
+import de.Keyle.MyPet.api.util.Compat;
 import de.Keyle.MyPet.compat.v1_7_R4.entity.EntityMyPet;
 import net.minecraft.server.v1_7_R4.EntityLiving;
+import net.minecraft.server.v1_7_R4.EntityPlayer;
+import net.minecraft.server.v1_7_R4.EntityTameableAnimal;
 import org.bukkit.craftbukkit.v1_7_R4.entity.CraftLivingEntity;
 import org.bukkit.entity.LivingEntity;
 
-public class MeleeAttack extends AIGoal {
+@Compat("v1_7_R4")
+public class MeleeAttack implements AIGoal {
     MyPet myPet;
     EntityMyPet petEntity;
     EntityLiving targetEntity;
@@ -60,6 +65,24 @@ public class MeleeAttack extends AIGoal {
         if (petEntity.getMyPet().getRangedDamage() > 0 && this.petEntity.f(targetEntity.locX, targetEntity.boundingBox.b, targetEntity.locZ) >= 20) {
             return false;
         }
+
+        Behavior behaviorSkill = myPet.getSkills().get(Behavior.class);
+        if (behaviorSkill != null && behaviorSkill.isActive()) {
+            if (behaviorSkill.getBehavior() == Behavior.BehaviorMode.Friendly) {
+                return false;
+            }
+            if (behaviorSkill.getBehavior() == Behavior.BehaviorMode.Raid) {
+                if (targetEntity instanceof EntityTameableAnimal && ((EntityTameableAnimal) targetEntity).isTamed()) {
+                    return false;
+                }
+                if (targetEntity instanceof EntityMyPet) {
+                    return false;
+                }
+                if (targetEntity instanceof EntityPlayer) {
+                    return false;
+                }
+            }
+        }
         this.targetEntity = targetEntity;
         return true;
     }
@@ -73,6 +96,24 @@ public class MeleeAttack extends AIGoal {
         }
         if (petEntity.getMyPet().getRangedDamage() > 0 && this.petEntity.f(targetEntity.locX, targetEntity.boundingBox.b, targetEntity.locZ) >= 20) {
             return true;
+        }
+
+        Behavior behaviorSkill = myPet.getSkills().get(Behavior.class);
+        if (behaviorSkill != null && behaviorSkill.isActive()) {
+            if (behaviorSkill.getBehavior() == Behavior.BehaviorMode.Friendly) {
+                return true;
+            }
+            if (behaviorSkill.getBehavior() == Behavior.BehaviorMode.Raid) {
+                if (this.targetEntity instanceof EntityTameableAnimal && ((EntityTameableAnimal) this.targetEntity).isTamed()) {
+                    return true;
+                }
+                if (this.targetEntity instanceof EntityMyPet) {
+                    return true;
+                }
+                if (this.targetEntity instanceof EntityPlayer) {
+                    return true;
+                }
+            }
         }
         return false;
     }

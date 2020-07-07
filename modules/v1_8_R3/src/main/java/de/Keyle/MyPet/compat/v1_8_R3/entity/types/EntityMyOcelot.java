@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -25,7 +25,6 @@ import de.Keyle.MyPet.api.entity.EntitySize;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.types.MyOcelot;
 import de.Keyle.MyPet.compat.v1_8_R3.entity.EntityMyPet;
-import de.Keyle.MyPet.compat.v1_8_R3.entity.ai.movement.Sit;
 import net.minecraft.server.v1_8_R3.EntityHuman;
 import net.minecraft.server.v1_8_R3.Item;
 import net.minecraft.server.v1_8_R3.ItemStack;
@@ -34,8 +33,6 @@ import org.bukkit.entity.Ocelot.Type;
 
 @EntitySize(width = 0.6F, height = 0.8F)
 public class EntityMyOcelot extends EntityMyPet {
-    private Sit sitPathfinder;
-
     public EntityMyOcelot(World world, MyPet myPet) {
         super(world, myPet);
     }
@@ -47,10 +44,6 @@ public class EntityMyOcelot extends EntityMyPet {
         } else {
             this.datawatcher.watch(16, (byte) (i & 0xFFFFFFFE));
         }
-    }
-
-    public boolean canMove() {
-        return !sitPathfinder.isSitting();
     }
 
     protected String getDeathSound() {
@@ -107,37 +100,29 @@ public class EntityMyOcelot extends EntityMyPet {
                     return true;
                 }
             }
-            this.sitPathfinder.toogleSitting();
-            return true;
         }
         return false;
     }
 
     protected void initDatawatcher() {
         super.initDatawatcher();
-        this.datawatcher.a(12, new Byte((byte) 0));     // age
-        this.datawatcher.a(16, new Byte((byte) 0)); // tamed/sitting
+        this.datawatcher.a(12, (byte) 0);     // age
+        this.datawatcher.a(16, (byte) 0); // tamed/sitting
         this.datawatcher.a(17, "");                 // ownername
-        this.datawatcher.a(18, new Byte((byte) 0)); // cat type
+        this.datawatcher.a(18, (byte) 0); // cat type
     }
 
     @Override
     public void updateVisuals() {
         if (getMyPet().isBaby()) {
-            this.datawatcher.watch(12, Byte.valueOf(Byte.MIN_VALUE));
+            this.datawatcher.watch(12, Byte.MIN_VALUE);
         } else {
-            this.datawatcher.watch(12, new Byte((byte) 0));
+            this.datawatcher.watch(12, (byte) 0);
         }
         this.datawatcher.watch(18, (byte) getMyPet().getCatType().ordinal());
     }
 
     public MyOcelot getMyPet() {
         return (MyOcelot) myPet;
-    }
-
-    public void setPathfinder() {
-        super.setPathfinder();
-        sitPathfinder = new Sit(this);
-        petPathfinderSelector.addGoal("Sit", 2, sitPathfinder);
     }
 }

@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -21,7 +21,7 @@
 package de.Keyle.MyPet.api.entity;
 
 import de.Keyle.MyPet.api.player.MyPetPlayer;
-import de.Keyle.MyPet.api.skill.skilltree.SkillTree;
+import de.Keyle.MyPet.api.skill.skilltree.Skilltree;
 import de.keyle.knbt.TagCompound;
 
 import java.util.UUID;
@@ -35,9 +35,9 @@ public interface StoredMyPet {
 
     void setHealth(double health);
 
-    double getHungerValue();
+    double getSaturation();
 
-    void setHungerValue(double value);
+    void setSaturation(double value);
 
     TagCompound getInfo();
 
@@ -63,9 +63,9 @@ public interface StoredMyPet {
 
     void setRespawnTime(int respawnTime);
 
-    SkillTree getSkilltree();
+    Skilltree getSkilltree();
 
-    boolean setSkilltree(SkillTree skillTree);
+    boolean setSkilltree(Skilltree skilltree);
 
     TagCompound getSkillInfo();
 

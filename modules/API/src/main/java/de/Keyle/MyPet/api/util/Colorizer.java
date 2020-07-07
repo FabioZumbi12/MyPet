@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Colorizer {
+
     private static Map<String, String> colorCodes = new HashMap<>();
 
     public static String setColors(String text) {
@@ -33,7 +34,7 @@ public class Colorizer {
             text = text.replaceAll("(?i)<" + color + ">", ChatColor.COLOR_CHAR + colorCodes.get(color));
         }
         text = text.replaceAll("(?i)<([0-9a-fk-or])>", ChatColor.COLOR_CHAR + "$1");
-        text = text.replaceAll("(?i)&([0-9a-fk-or])", ChatColor.COLOR_CHAR + "$1");
+        text = ChatColor.translateAlternateColorCodes('&', text);
         return text;
     }
 
@@ -49,6 +50,7 @@ public class Colorizer {
     static {
         for (ChatColor color : ChatColor.values()) {
             colorCodes.put(color.name().replace("_", ""), String.valueOf(color.getChar()));
+            colorCodes.put(color.name(), String.valueOf(color.getChar()));
         }
     }
 }

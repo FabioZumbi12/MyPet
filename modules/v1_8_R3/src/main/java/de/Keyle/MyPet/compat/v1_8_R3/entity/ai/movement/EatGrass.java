@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -20,22 +20,28 @@
 
 package de.Keyle.MyPet.compat.v1_8_R3.entity.ai.movement;
 
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import de.Keyle.MyPet.api.Configuration;
 import de.Keyle.MyPet.api.entity.ai.AIGoal;
+import de.Keyle.MyPet.api.util.Compat;
 import de.Keyle.MyPet.compat.v1_8_R3.entity.types.EntityMySheep;
 import net.minecraft.server.v1_8_R3.*;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_8_R3.event.CraftEventFactory;
 
-public class EatGrass extends AIGoal {
+@Compat("v1_8_R3")
+public class EatGrass implements AIGoal {
     private EntityMySheep entityMySheep;
     private World world;
-    private double chanceToEat;
     int eatTicks = 0;
 
-    public EatGrass(EntityMySheep entityMySheep, double chanceToEat) {
+    private static final Predicate<IBlockData> TALL_GRASS = BlockStatePredicate
+            .a(Blocks.TALLGRASS)
+            .a(BlockLongGrass.TYPE, Predicates.equalTo(BlockLongGrass.EnumTallGrassType.GRASS));
+
+    public EatGrass(EntityMySheep entityMySheep) {
         this.entityMySheep = entityMySheep;
-        this.chanceToEat = chanceToEat;
         this.world = entityMySheep.world;
     }
 
@@ -45,7 +51,7 @@ public class EatGrass extends AIGoal {
             return false;
         } else if (!this.entityMySheep.getMyPet().isSheared()) {
             return false;
-        } else if (entityMySheep.getRandom().nextDouble() > chanceToEat / 100.) {
+        } else if (entityMySheep.getRandom().nextInt(1000) != 0) {
             return false;
         } else if (this.entityMySheep.getTarget() != null && !this.entityMySheep.getTarget().isDead()) {
             return false;
@@ -54,7 +60,9 @@ public class EatGrass extends AIGoal {
         int blockLocY = MathHelper.floor(this.entityMySheep.locY);
         int blockLocZ = MathHelper.floor(this.entityMySheep.locZ);
 
-        return this.world.getType(new BlockPosition(blockLocX, blockLocY, blockLocZ)) == Blocks.TALLGRASS || this.world.getType(new BlockPosition(blockLocX, blockLocY - 1, blockLocZ)) == Blocks.GRASS;
+        BlockPosition blockposition = new BlockPosition(blockLocX, blockLocY, blockLocZ);
+
+        return TALL_GRASS.apply(this.world.getType(blockposition)) || this.world.getType(blockposition.down()).getBlock() == Blocks.GRASS;
     }
 
     @Override
@@ -64,7 +72,7 @@ public class EatGrass extends AIGoal {
 
     @Override
     public void start() {
-        this.eatTicks = 40;
+        this.eatTicks = 30;
         this.world.broadcastEntityEffect(this.entityMySheep, (byte) 10);
         this.entityMySheep.getPetNavigation().stop();
     }
@@ -76,23 +84,35 @@ public class EatGrass extends AIGoal {
 
     @Override
     public void tick() {
-        this.eatTicks--;
-        if (this.eatTicks == 4) {
+        if (--this.eatTicks == 0) {
             int blockLocX = MathHelper.floor(this.entityMySheep.locX);
             int blockLocY = MathHelper.floor(this.entityMySheep.locY);
             int blockLocZ = MathHelper.floor(this.entityMySheep.locZ);
 
-            if (this.world.getType(new BlockPosition(blockLocX, blockLocY, blockLocZ)) == Blocks.TALLGRASS) {
-                if (!CraftEventFactory.callEntityChangeBlockEvent(this.entityMySheep.getBukkitEntity(), this.entityMySheep.world.getWorld().getBlockAt(blockLocX, blockLocY, blockLocZ), Material.AIR).isCancelled()) {
-                    this.world.triggerEffect(2001, new BlockPosition(blockLocX, blockLocY, blockLocZ), Block.getId(Blocks.TALLGRASS) + 4096);
-                    this.world.setAir(new BlockPosition(blockLocX, blockLocY, blockLocZ));
-                    this.entityMySheep.getMyPet().setSheared(false);
+            BlockPosition blockAt = new BlockPosition(blockLocX, blockLocY, blockLocZ);
+            if (TALL_GRASS.apply(this.world.getType(blockAt))) {
+                if (!CraftEventFactory.callEntityChangeBlockEvent(
+                        this.entityMySheep,
+                        this.entityMySheep.world.getWorld().getBlockAt(blockLocX, blockLocY, blockLocZ),
+                        Material.AIR,
+                        !this.world.getGameRules().getBoolean("mobGriefing")
+                ).isCancelled()) {
+                    this.world.setAir(blockAt, false);
                 }
-            } else if (this.world.getType(new BlockPosition(blockLocX, blockLocY - 1, blockLocZ)) == Blocks.GRASS) {
-                if (!CraftEventFactory.callEntityChangeBlockEvent(this.entityMySheep.getBukkitEntity(), this.entityMySheep.world.getWorld().getBlockAt(blockLocX, blockLocY - 1, blockLocZ), Material.DIRT).isCancelled()) {
-                    this.world.triggerEffect(2001, new BlockPosition(blockLocX, blockLocY - 1, blockLocZ), Block.getId(Blocks.GRASS));
-                    this.world.setTypeAndData(new BlockPosition(blockLocX, blockLocY - 1, blockLocZ), Blocks.DIRT.getBlockData(), 2);
-                    this.entityMySheep.getMyPet().setSheared(false);
+                entityMySheep.getMyPet().setSheared(false);
+            } else {
+                BlockPosition blockUnder = blockAt.down();
+                if (this.world.getType(blockUnder).getBlock() == Blocks.GRASS) {
+                    if (!CraftEventFactory.callEntityChangeBlockEvent(
+                            this.entityMySheep,
+                            world.getWorld().getBlockAt(blockLocX, blockLocY - 1, blockLocZ),
+                            Material.AIR,
+                            !this.world.getGameRules().getBoolean("mobGriefing")
+                    ).isCancelled()) {
+                        this.world.triggerEffect(2001, blockUnder, Block.getId(Blocks.GRASS));
+                        this.world.setTypeAndData(blockUnder, Blocks.DIRT.getBlockData(), 2);
+                    }
+                    entityMySheep.getMyPet().setSheared(false);
                 }
             }
         }

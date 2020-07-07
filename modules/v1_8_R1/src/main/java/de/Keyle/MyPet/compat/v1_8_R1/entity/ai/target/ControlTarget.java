@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -24,10 +24,11 @@ import de.Keyle.MyPet.MyPetApi;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.ai.AIGoal;
 import de.Keyle.MyPet.api.entity.ai.target.TargetPriority;
-import de.Keyle.MyPet.api.skill.skills.BehaviorInfo.BehaviorState;
+import de.Keyle.MyPet.api.skill.skills.Behavior;
+import de.Keyle.MyPet.api.skill.skills.Behavior.BehaviorMode;
+import de.Keyle.MyPet.api.util.Compat;
 import de.Keyle.MyPet.compat.v1_8_R1.entity.EntityMyPet;
 import de.Keyle.MyPet.compat.v1_8_R1.entity.ai.movement.Control;
-import de.Keyle.MyPet.skill.skills.Behavior;
 import net.minecraft.server.v1_8_R1.EntityArmorStand;
 import net.minecraft.server.v1_8_R1.EntityLiving;
 import net.minecraft.server.v1_8_R1.EntityPlayer;
@@ -37,7 +38,8 @@ import org.bukkit.craftbukkit.v1_8_R1.entity.CraftPlayer;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
-public class ControlTarget extends AIGoal {
+@Compat("v1_8_R1")
+public class ControlTarget implements AIGoal {
     private MyPet myPet;
     private EntityMyPet petEntity;
     private EntityLiving target;
@@ -64,10 +66,9 @@ public class ControlTarget extends AIGoal {
             return false;
         }
         if (controlPathfinderGoal.moveTo != null && petEntity.canMove()) {
-            Behavior behaviorSkill = null;
-            if (myPet.getSkills().isSkillActive(Behavior.class)) {
-                behaviorSkill = myPet.getSkills().getSkill(Behavior.class).get();
-                if (behaviorSkill.getBehavior() == Behavior.BehaviorState.Friendly) {
+            Behavior behaviorSkill = myPet.getSkills().get(Behavior.class);
+            if (behaviorSkill.isActive()) {
+                if (behaviorSkill.getBehavior() == BehaviorMode.Friendly) {
                     return false;
                 }
             }
@@ -79,7 +80,7 @@ public class ControlTarget extends AIGoal {
                         Player targetPlayer = (Player) entityLiving.getBukkitEntity();
                         if (myPet.getOwner().equals(targetPlayer)) {
                             continue;
-                        } else if (!MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), targetPlayer, true)) {
+                        } else if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), targetPlayer, true)) {
                             continue;
                         }
                     } else if (entityLiving instanceof EntityTameableAnimal) {
@@ -88,21 +89,21 @@ public class ControlTarget extends AIGoal {
                             Player tameableOwner = (Player) tameable.getOwner().getBukkitEntity();
                             if (myPet.getOwner().equals(tameableOwner)) {
                                 continue;
-                            } else if (!MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), tameableOwner, true)) {
+                            } else if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), tameableOwner, true)) {
                                 continue;
                             }
                         }
                     } else if (entityLiving instanceof EntityMyPet) {
                         MyPet targetMyPet = ((EntityMyPet) entityLiving).getMyPet();
-                        if (!MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), targetMyPet.getOwner().getPlayer(), true)) {
+                        if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), targetMyPet.getOwner().getPlayer(), true)) {
                             continue;
                         }
                     }
-                    if (!MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), entityLiving.getBukkitEntity())) {
+                    if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), entityLiving.getBukkitEntity())) {
                         continue;
                     }
                     if (behaviorSkill != null) {
-                        if (behaviorSkill.getBehavior() == BehaviorState.Raid) {
+                        if (behaviorSkill.getBehavior() == BehaviorMode.Raid) {
                             if (entityLiving instanceof EntityTameableAnimal) {
                                 continue;
                             } else if (entityLiving instanceof EntityMyPet) {

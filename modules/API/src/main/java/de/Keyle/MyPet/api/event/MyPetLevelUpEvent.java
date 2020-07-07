@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -21,50 +21,19 @@
 package de.Keyle.MyPet.api.event;
 
 import de.Keyle.MyPet.api.entity.MyPet;
-import de.Keyle.MyPet.api.player.MyPetPlayer;
-import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class MyPetLevelUpEvent extends Event {
+public class MyPetLevelUpEvent extends MyPetLevelEvent {
     private static final HandlerList handlers = new HandlerList();
+    private final int fromLevel;
 
-    private final MyPet myPet;
-    private final int level;
-    private final int lastLevel;
-    private final boolean beQuiet;
-
-    public MyPetLevelUpEvent(MyPet myPet, int Level, int lastLevel) {
-        this.myPet = myPet;
-        this.level = Level;
-        this.lastLevel = lastLevel;
-        this.beQuiet = false;
+    public MyPetLevelUpEvent(MyPet myPet, int level, int fromLevel, boolean beQuiet) {
+        super(myPet, level, beQuiet);
+        this.fromLevel = fromLevel;
     }
 
-    public MyPetLevelUpEvent(MyPet myPet, int level, int lastLevel, boolean beQuiet) {
-        this.myPet = myPet;
-        this.level = level;
-        this.lastLevel = lastLevel;
-        this.beQuiet = beQuiet;
-    }
-
-    public MyPetPlayer getOwner() {
-        return myPet.getOwner();
-    }
-
-    public boolean isQuiet() {
-        return beQuiet;
-    }
-
-    public MyPet getPet() {
-        return myPet;
-    }
-
-    public int getLevel() {
-        return level;
-    }
-
-    public int getLastLevel() {
-        return lastLevel;
+    public int fromLevel() {
+        return fromLevel;
     }
 
     public HandlerList getHandlers() {

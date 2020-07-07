@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -20,9 +20,10 @@
 
 package de.Keyle.MyPet.compat.v1_9_R1.util.iconmenu;
 
+import de.Keyle.MyPet.api.gui.IconMenu;
+import de.Keyle.MyPet.api.gui.IconMenuItem;
 import de.Keyle.MyPet.api.util.Compat;
-import de.Keyle.MyPet.api.util.inventory.IconMenu;
-import de.Keyle.MyPet.api.util.inventory.IconMenuItem;
+import de.Keyle.MyPet.api.util.ReflectionUtil;
 import de.Keyle.MyPet.compat.v1_9_R1.util.inventory.CustomInventory;
 import de.Keyle.MyPet.compat.v1_9_R1.util.inventory.ItemStackNBTConverter;
 import de.keyle.knbt.TagCompound;
@@ -30,7 +31,7 @@ import net.minecraft.server.v1_9_R1.ItemStack;
 import net.minecraft.server.v1_9_R1.NBTTagCompound;
 import net.minecraft.server.v1_9_R1.NBTTagList;
 import net.minecraft.server.v1_9_R1.NBTTagString;
-import org.bukkit.craftbukkit.v1_9_R1.inventory.CraftInventory;
+import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_9_R1.inventory.CraftItemStack;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.inventory.Inventory;
@@ -38,55 +39,48 @@ import org.bukkit.inventory.Inventory;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Compat("v1_9_R1")
-public class IconMenuInventory implements de.Keyle.MyPet.api.util.inventory.IconMenuInventory {
+public class IconMenuInventory implements de.Keyle.MyPet.api.gui.IconMenuInventory {
+
     private static Method applyToItemMethhod = null;
 
     static {
         try {
             Class craftMetaItemClass = Class.forName("org.bukkit.craftbukkit.v1_9_R1.inventory.CraftMetaItem");
-            applyToItemMethhod = craftMetaItemClass.getDeclaredMethod("applyToItem", NBTTagCompound.class);
-            applyToItemMethhod.setAccessible(true);
-        } catch (ClassNotFoundException | NoSuchMethodException e) {
+            applyToItemMethhod = ReflectionUtil.getMethod(craftMetaItemClass, "applyToItem", NBTTagCompound.class);
+        } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
 
     CustomInventory minecraftInventory;
-    CraftInventory bukkitInventory;
     int size = 0;
 
     public CustomInventory getMinecraftInventory() {
         return minecraftInventory;
     }
 
-    public Inventory getCraftBukkitInventory() {
-        return bukkitInventory;
-    }
-
     @Override
     public void open(IconMenu menu, HumanEntity player) {
-        if (bukkitInventory == null) {
-            size = menu.getSize();
-            minecraftInventory = new CustomInventory(size, menu.getTitle());
-            bukkitInventory = new CraftInventory(minecraftInventory);
+        size = menu.getSize();
+        minecraftInventory = new CustomInventory(size, menu.getTitle());
 
-            for (int slot = 0; slot < size; slot++) {
-                IconMenuItem menuItem = menu.getOption(slot);
-                if (menuItem != null) {
-                    ItemStack item = createItemStack(menuItem);
-                    minecraftInventory.setItem(slot, item);
-                }
+        for (int slot = 0; slot < size; slot++) {
+            IconMenuItem menuItem = menu.getOption(slot);
+            if (menuItem != null) {
+                ItemStack item = createItemStack(menuItem);
+                minecraftInventory.setItem(slot, item);
             }
         }
-        player.openInventory(bukkitInventory);
+        player.openInventory(minecraftInventory.getBukkitInventory());
     }
 
     @Override
     public void update(IconMenu menu) {
-        if (bukkitInventory != null) {
+        if (minecraftInventory != null) {
             for (int slot = 0; slot < size; slot++) {
                 IconMenuItem menuItem = menu.getOption(slot);
                 if (menuItem != null) {
@@ -101,24 +95,24 @@ public class IconMenuInventory implements de.Keyle.MyPet.api.util.inventory.Icon
 
     @Override
     public void close() {
-        if (bukkitInventory != null) {
-            List<HumanEntity> viewers = new ArrayList<>(bukkitInventory.getViewers());
-            for (HumanEntity viewer : viewers) {
-                viewer.closeInventory();
-            }
-            bukkitInventory = null;
-            minecraftInventory = null;
+        List<HumanEntity> viewers = new ArrayList<>(getViewers());
+        for (HumanEntity viewer : viewers) {
+            viewer.closeInventory();
         }
+        minecraftInventory = null;
     }
 
     @Override
     public boolean isMenuInventory(Inventory inv) {
-        return bukkitInventory != null && bukkitInventory.equals(inv);
+        return minecraftInventory != null && minecraftInventory.getBukkitInventory().equals(inv);
     }
 
     @Override
     public List<HumanEntity> getViewers() {
-        return bukkitInventory != null ? bukkitInventory.getViewers() : new ArrayList<HumanEntity>();
+        if (minecraftInventory == null) {
+            return Collections.emptyList();
+        }
+        return minecraftInventory.getBukkitInventory().getViewers();
     }
 
     @Override
@@ -128,6 +122,9 @@ public class IconMenuInventory implements de.Keyle.MyPet.api.util.inventory.Icon
 
     protected ItemStack createItemStack(IconMenuItem icon) {
         ItemStack is = CraftItemStack.asNMSCopy(new org.bukkit.inventory.ItemStack(icon.getMaterial(), icon.getAmount(), (short) icon.getData()));
+        if (is == null) {
+            is = CraftItemStack.asNMSCopy(new org.bukkit.inventory.ItemStack(Material.SAPLING));
+        }
 
         NBTTagList emptyList = new NBTTagList();
         if (is.getTag() == null) {

@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -25,10 +25,17 @@ import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.MyPetBaby;
 import de.Keyle.MyPet.api.entity.MyPetEquipment;
 
-import static org.bukkit.Material.ROTTEN_FLESH;
 
-@DefaultInfo(food = {ROTTEN_FLESH})
+@DefaultInfo(food = {"rotten_flesh"})
 public interface MyZombie extends MyPet, MyPetEquipment, MyPetBaby {
+    enum Type {
+        NORMAL, HUSK, VILLAGER
+    }
+
+    boolean isHusk();
+
+    void setHusk(boolean flag);
+
     boolean isVillager();
 
     void setVillager(boolean flag);
@@ -36,4 +43,12 @@ public interface MyZombie extends MyPet, MyPetEquipment, MyPetBaby {
     void setProfession(int type);
 
     int getProfession();
+
+    int getType();
+
+    void setType(int type);
+
+    Type getZombieType();
+
+    void setZombieType(Type type);
 }

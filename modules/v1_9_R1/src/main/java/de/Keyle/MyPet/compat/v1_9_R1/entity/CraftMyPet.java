@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -25,6 +25,7 @@ import de.Keyle.MyPet.api.entity.MyPetBukkitEntity;
 import de.Keyle.MyPet.api.entity.MyPetType;
 import de.Keyle.MyPet.api.entity.ai.target.TargetPriority;
 import de.Keyle.MyPet.api.player.MyPetPlayer;
+import de.Keyle.MyPet.api.util.Compat;
 import org.bukkit.craftbukkit.v1_9_R1.CraftServer;
 import org.bukkit.craftbukkit.v1_9_R1.entity.CraftCreature;
 import org.bukkit.craftbukkit.v1_9_R1.entity.CraftLivingEntity;
@@ -34,6 +35,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 
+@Compat("v1_9_R1")
 public class CraftMyPet extends CraftCreature implements MyPetBukkitEntity {
     protected MyPetPlayer petOwner;
     protected EntityMyPet petEntity;
@@ -47,6 +49,16 @@ public class CraftMyPet extends CraftCreature implements MyPetBukkitEntity {
 
     public boolean canMove() {
         return petEntity.canMove();
+    }
+
+    @Override
+    public void setSitting(boolean sitting) {
+        getHandle().setSitting(sitting);
+    }
+
+    @Override
+    public boolean isSitting() {
+        return getHandle().isSitting();
     }
 
     @Override
@@ -101,7 +113,6 @@ public class CraftMyPet extends CraftCreature implements MyPetBukkitEntity {
         return fakeEquipment;
     }
 
-    @Deprecated
     public void setTarget(LivingEntity target) {
         setTarget(target, TargetPriority.Bukkit);
     }

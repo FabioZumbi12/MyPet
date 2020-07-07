@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -23,6 +23,7 @@ package de.Keyle.MyPet.api.util.inventory;
 import de.keyle.knbt.TagCompound;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 public interface CustomInventory {
@@ -45,4 +46,6 @@ public interface CustomInventory {
     void dropContentAt(Location location);
 
     int addItem(ItemStack itemStack);
+
+    Inventory getBukkitInventory();
 }

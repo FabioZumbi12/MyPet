@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -21,9 +21,14 @@
 package de.Keyle.MyPet.api.util;
 
 import de.Keyle.MyPet.MyPetApi;
+import de.Keyle.MyPet.api.Util;
+import de.Keyle.MyPet.api.util.inventory.material.ItemDatabase;
+import de.Keyle.MyPet.api.util.inventory.material.MaterialHolder;
+import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
 public abstract class ConfigItem {
+
     protected ItemStack item = null;
     protected DurabilityMode durabilityMode = DurabilityMode.NotUsed;
 
@@ -37,7 +42,24 @@ public abstract class ConfigItem {
     }
 
     public ConfigItem(String data) {
-        load(data);
+        String[] splitData = data.split("\\s+", 2);
+
+        if (splitData.length == 0) {
+            return;
+        }
+        if (Util.isInt(splitData[0])) {
+            MyPetApi.getLogger().warning("Number IDs are not supported anymore! You need to use 1.13 item IDs from now on. Please check your configs.");
+            return;
+        }
+
+        ItemDatabase itemDatabase = MyPetApi.getServiceManager().getService(ItemDatabase.class).get();
+        MaterialHolder material = itemDatabase.getByID(splitData[0]);
+        if (material == null) {
+            MyPetApi.getLogger().warning(splitData[0] + " is not a valid 1.13 item ID! Please check your configs.");
+            return;
+        }
+
+        load(material, splitData.length == 2 ? splitData[1] : null);
     }
 
     public static ConfigItem createConfigItem(String data) {
@@ -49,17 +71,13 @@ public abstract class ConfigItem {
     }
 
     public boolean compare(ItemStack compareItem) {
-        if (item == null || item.getTypeId() == 0) {
-            if (compareItem == null || compareItem.getTypeId() == 0) {
-                return true;
-            } else {
-                return false;
-            }
+        if (item == null || item.getType() == Material.AIR) {
+            return compareItem == null || compareItem.getType() == Material.AIR;
         }
         if (compareItem == null) {
             return false;
         }
-        if (item.getTypeId() != compareItem.getTypeId()) {
+        if (item.getType() != compareItem.getType()) {
             return false;
         }
         switch (durabilityMode) {
@@ -96,5 +114,5 @@ public abstract class ConfigItem {
 
     public abstract boolean compare(Object compareItem);
 
-    public abstract void load(String data);
+    public abstract void load(MaterialHolder material, String data);
 }

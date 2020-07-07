@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -22,30 +22,24 @@ package de.Keyle.MyPet.api;
 
 import de.Keyle.MyPet.api.entity.MyPetMinecraftEntity;
 import de.Keyle.MyPet.api.player.MyPetPlayer;
+import de.Keyle.MyPet.api.util.inventory.material.MaterialHolder;
 import de.keyle.knbt.TagCompound;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Zombie;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
 import java.io.*;
+import java.util.UUID;
 
 public abstract class PlatformHelper {
-    /**
-     * @param location the {@link Location} around which players must be to see the effect
-     * @param effect   list of effects: https://gist.github.com/riking/5759002
-     * @param offsetX  the amount to be randomly offset by in the X axis
-     * @param offsetY  the amount to be randomly offset by in the Y axis
-     * @param offsetZ  the amount to be randomly offset by in the Z axis
-     * @param speed    the speed of the particles
-     * @param count    the number of particles
-     * @param radius   the radius around the location
-     */
-    public abstract void playParticleEffect(Location location, String effect, float offsetX, float offsetY, float offsetZ, float speed, int count, int radius, int... data);
 
     /**
      * @param location the {@link Location} around which players must be to see the effect
@@ -57,7 +51,27 @@ public abstract class PlatformHelper {
      * @param count    the number of particles
      * @param radius   the radius around the location
      */
-    public abstract void playParticleEffect(Player player, Location location, String effect, float offsetX, float offsetY, float offsetZ, float speed, int count, int radius, int... data);
+    public abstract void playParticleEffect(Location location, String effect, float offsetX, float offsetY, float offsetZ, float speed, int count, int radius, de.Keyle.MyPet.api.compat.Compat<Object> data);
+
+    public void playParticleEffect(Location location, String effect, float offsetX, float offsetY, float offsetZ, float speed, int count, int radius) {
+        playParticleEffect(location, effect, offsetX, offsetY, offsetZ, speed, count, radius, null);
+    }
+
+    /**
+     * @param location the {@link Location} around which players must be to see the effect
+     * @param effect   list of effects: https://gist.github.com/riking/5759002
+     * @param offsetX  the amount to be randomly offset by in the X axis
+     * @param offsetY  the amount to be randomly offset by in the Y axis
+     * @param offsetZ  the amount to be randomly offset by in the Z axis
+     * @param speed    the speed of the particles
+     * @param count    the number of particles
+     * @param radius   the radius around the location
+     */
+    public abstract void playParticleEffect(Player player, Location location, String effect, float offsetX, float offsetY, float offsetZ, float speed, int count, int radius, de.Keyle.MyPet.api.compat.Compat<Object> data);
+
+    public void playParticleEffect(Player player, Location location, String effect, float offsetX, float offsetY, float offsetZ, float speed, int count, int radius) {
+        playParticleEffect(player, location, effect, offsetX, offsetY, offsetZ, speed, count, radius, null);
+    }
 
     public abstract boolean canSpawn(Location loc, MyPetMinecraftEntity entity);
 
@@ -73,25 +87,6 @@ public abstract class PlatformHelper {
             lang = getPlayerLanguage((Player) sender);
         }
         return lang;
-    }
-
-    public Material checkMaterial(int itemid, Material defaultMaterial) {
-        if (Material.getMaterial(itemid) == null) {
-            return defaultMaterial;
-        } else {
-            return Material.getMaterial(itemid);
-        }
-    }
-
-    public boolean isValidMaterial(int itemid) {
-        return Material.getMaterial(itemid) != null;
-    }
-
-    public String getMaterialName(int itemId) {
-        if (isValidMaterial(itemId)) {
-            return Material.getMaterial(itemId).name();
-        }
-        return String.valueOf(itemId);
     }
 
     public void sendMessage(Player player, String Message) {
@@ -134,5 +129,52 @@ public abstract class PlatformHelper {
 
     public abstract boolean isEquipment(ItemStack itemStack);
 
+    public abstract String getVanillaName(ItemStack itemStack);
+
     public abstract void doPickupAnimation(Entity entity, Entity target);
+
+    public abstract Entity getEntity(int id, World world);
+
+    public double distanceSquared(Location a, Location b) {
+        if (!a.getWorld().equals(b.getWorld())) {
+            return Double.MAX_VALUE;
+        }
+        return a.distanceSquared(b);
+    }
+
+    public double distance(Location a, Location b) {
+        if (!a.getWorld().equals(b.getWorld())) {
+            return Double.MAX_VALUE;
+        }
+        return Math.sqrt(distanceSquared(a, b));
+    }
+
+    public Material getMaterial(MaterialHolder materialHolder) {
+        return Material.matchMaterial(materialHolder.getId().toUpperCase());
+    }
+
+    public abstract void strikeLightning(Location loc, float distance);
+
+    public boolean compareBlockPositions(Location a, Location b) {
+        return a.getBlockX() == b.getBlockX() &&
+                a.getBlockY() == b.getBlockY() &&
+                a.getBlockZ() == b.getBlockZ();
+    }
+
+    public boolean isSpigot() {
+        try {
+            Class.forName("org.spigotmc.SpigotConfig");
+            return true;
+        } catch (Throwable throwable) {
+            return false;
+        }
+    }
+
+    public Entity getEntityByUUID(UUID uuid) {
+        return Bukkit.getEntity(uuid);
+    }
+
+    public abstract String getLastDamageSource(LivingEntity e);
+
+    public abstract String itemstackToString(org.bukkit.inventory.ItemStack itemStack);
 }

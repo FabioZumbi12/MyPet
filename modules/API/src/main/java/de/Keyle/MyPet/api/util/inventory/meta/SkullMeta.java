@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -21,10 +21,11 @@
 package de.Keyle.MyPet.api.util.inventory.meta;
 
 import com.google.common.io.BaseEncoding;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import de.keyle.knbt.TagCompound;
 import de.keyle.knbt.TagList;
 import de.keyle.knbt.TagString;
-import org.json.simple.JSONObject;
 
 public class SkullMeta implements IconMeta {
     String name = null;
@@ -101,6 +102,7 @@ public class SkullMeta implements IconMeta {
         return false;
     }
 
+    @SuppressWarnings("unchecked")
     public void applyTo(TagCompound tag) {
         if (hasOwner()) {
             TagCompound ownerTag = new TagCompound();
@@ -112,13 +114,13 @@ public class SkullMeta implements IconMeta {
                 TagCompound propertiesTag = new TagCompound();
                 TagList textureList = new TagList();
                 TagCompound textureTag = new TagCompound();
-                JSONObject jsonObject = new JSONObject();
-                JSONObject texturesObject = new JSONObject();
-                JSONObject skinObject = new JSONObject();
-                jsonObject.put("textures", texturesObject);
-                texturesObject.put("SKIN", skinObject);
-                skinObject.put("url", getTexture());
-                String base64 = BaseEncoding.base64Url().encode(jsonObject.toJSONString().getBytes());
+                JsonObject jsonObject = new JsonObject();
+                JsonObject texturesObject = new JsonObject();
+                JsonObject skinObject = new JsonObject();
+                jsonObject.add("textures", texturesObject);
+                texturesObject.add("SKIN", skinObject);
+                skinObject.addProperty("url", getTexture());
+                String base64 = BaseEncoding.base64Url().encode(new Gson().toJson(jsonObject).getBytes());
                 textureTag.put("Value", new TagString(base64));
                 textureList.addTag(textureTag);
                 propertiesTag.put("textures", textureList);
@@ -127,5 +129,12 @@ public class SkullMeta implements IconMeta {
 
             tag.put("SkullOwner", ownerTag);
         }
+    }
+
+    public SkullMeta clone() {
+        SkullMeta meta = new SkullMeta();
+        meta.name = this.name;
+        meta.texture = this.texture;
+        return meta;
     }
 }

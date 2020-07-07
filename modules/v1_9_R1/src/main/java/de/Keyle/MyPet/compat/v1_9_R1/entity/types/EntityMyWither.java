@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@
 
 package de.Keyle.MyPet.compat.v1_9_R1.entity.types;
 
+import de.Keyle.MyPet.api.Configuration;
 import de.Keyle.MyPet.api.entity.EntitySize;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.types.MyWither;
@@ -31,10 +32,11 @@ import net.minecraft.server.v1_9_R1.World;
 
 @EntitySize(width = 0.9999F, height = 3.5F)
 public class EntityMyWither extends EntityMyPet {
-    private static final DataWatcherObject<Integer> targetWatcher = DataWatcher.a(EntityMyWither.class, DataWatcherRegistry.b);
-    private static final DataWatcherObject<Integer> watcher_1 = DataWatcher.a(EntityMyWither.class, DataWatcherRegistry.b);
-    private static final DataWatcherObject<Integer> watcher_2 = DataWatcher.a(EntityMyWither.class, DataWatcherRegistry.b);
-    private static final DataWatcherObject<Integer> invulnerabilityWatcher = DataWatcher.a(EntityMyWither.class, DataWatcherRegistry.b);
+
+    private static final DataWatcherObject<Integer> TARGET_WATCHER = DataWatcher.a(EntityMyWither.class, DataWatcherRegistry.b);
+    private static final DataWatcherObject<Integer> UNUSED_WATCHER_1 = DataWatcher.a(EntityMyWither.class, DataWatcherRegistry.b);
+    private static final DataWatcherObject<Integer> UNUSED_WATCHER_2 = DataWatcher.a(EntityMyWither.class, DataWatcherRegistry.b);
+    private static final DataWatcherObject<Integer> INVULNERABILITY_WATCHER = DataWatcher.a(EntityMyWither.class, DataWatcherRegistry.b);
 
     public EntityMyWither(World world, MyPet myPet) {
         super(world, myPet);
@@ -56,29 +58,33 @@ public class EntityMyWither extends EntityMyPet {
 
     protected void initDatawatcher() {
         super.initDatawatcher();
-        this.datawatcher.register(targetWatcher, 0);          // target entityID
-        this.datawatcher.register(watcher_1, 0);              // N/A
-        this.datawatcher.register(watcher_2, 0);              // N/A
-        this.datawatcher.register(invulnerabilityWatcher, 0); // invulnerability (blue, size)
+        this.datawatcher.register(TARGET_WATCHER, 0);          // target entityID
+        this.datawatcher.register(UNUSED_WATCHER_1, 0);              // N/A
+        this.datawatcher.register(UNUSED_WATCHER_2, 0);              // N/A
+        this.datawatcher.register(INVULNERABILITY_WATCHER, 0); // invulnerability (blue, size)
     }
 
     public void onLivingUpdate() {
         super.onLivingUpdate();
-
-        if (!this.onGround && this.motY < 0.0D) {
-            this.motY *= 0.6D;
+        if (Configuration.MyPet.Wither.CAN_GLIDE) {
+            if (!this.onGround && this.motY < 0.0D) {
+                this.motY *= 0.6D;
+            }
         }
     }
 
     @Override
     public void updateVisuals() {
-        this.datawatcher.set(invulnerabilityWatcher, getMyPet().isBaby() ? 600 : 0);
+        this.datawatcher.set(INVULNERABILITY_WATCHER, getMyPet().isBaby() ? 600 : 0);
     }
 
     /**
      * -> disable falldamage
      */
     public void e(float f, float f1) {
+        if (!Configuration.MyPet.Wither.CAN_GLIDE) {
+            super.e(f, f1);
+        }
     }
 
     public MyWither getMyPet() {

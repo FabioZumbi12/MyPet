@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -23,26 +23,31 @@ package de.Keyle.MyPet.compat.v1_9_R1.entity;
 import de.Keyle.MyPet.MyPetApi;
 import de.Keyle.MyPet.api.Configuration;
 import de.Keyle.MyPet.api.Util;
-import de.Keyle.MyPet.api.entity.EntitySize;
-import de.Keyle.MyPet.api.entity.MyPet;
-import de.Keyle.MyPet.api.entity.MyPetBaby;
-import de.Keyle.MyPet.api.entity.MyPetMinecraftEntity;
+import de.Keyle.MyPet.api.compat.ParticleCompat;
+import de.Keyle.MyPet.api.entity.*;
 import de.Keyle.MyPet.api.entity.ai.AIGoalSelector;
 import de.Keyle.MyPet.api.entity.ai.navigation.AbstractNavigation;
 import de.Keyle.MyPet.api.entity.ai.target.TargetPriority;
+import de.Keyle.MyPet.api.event.MyPetFeedEvent;
 import de.Keyle.MyPet.api.event.MyPetInventoryActionEvent;
+import de.Keyle.MyPet.api.event.MyPetSitEvent;
 import de.Keyle.MyPet.api.player.DonateCheck;
 import de.Keyle.MyPet.api.player.MyPetPlayer;
 import de.Keyle.MyPet.api.player.Permissions;
+import de.Keyle.MyPet.api.skill.skills.Ride;
 import de.Keyle.MyPet.api.util.ConfigItem;
+import de.Keyle.MyPet.api.util.ReflectionUtil;
 import de.Keyle.MyPet.api.util.locale.Translation;
+import de.Keyle.MyPet.compat.v1_9_R1.PlatformHelper;
 import de.Keyle.MyPet.compat.v1_9_R1.entity.ai.attack.MeleeAttack;
 import de.Keyle.MyPet.compat.v1_9_R1.entity.ai.attack.RangedAttack;
-import de.Keyle.MyPet.compat.v1_9_R1.entity.ai.movement.*;
 import de.Keyle.MyPet.compat.v1_9_R1.entity.ai.movement.Float;
+import de.Keyle.MyPet.compat.v1_9_R1.entity.ai.movement.*;
 import de.Keyle.MyPet.compat.v1_9_R1.entity.ai.navigation.VanillaNavigation;
 import de.Keyle.MyPet.compat.v1_9_R1.entity.ai.target.*;
-import de.Keyle.MyPet.skill.skills.Ride;
+import de.Keyle.MyPet.compat.v1_9_R1.entity.types.EntityMyHorse;
+import de.Keyle.MyPet.skill.skills.ControlImpl;
+import de.Keyle.MyPet.skill.skills.RideImpl;
 import net.minecraft.server.v1_9_R1.*;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -50,19 +55,24 @@ import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_9_R1.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_9_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_9_R1.inventory.CraftItemStack;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.util.List;
 
 public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyPetMinecraftEntity {
-    protected static final DataWatcherObject<Byte> potionParticleWatcher = as;
+
+    protected static final DataWatcherObject<Byte> POTION_PARTICLE_WATCHER = as;
 
     protected AIGoalSelector petPathfinderSelector, petTargetSelector;
     protected EntityLiving target = null;
@@ -71,25 +81,20 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
     protected boolean hasRider = false;
     protected boolean isMyPet = false;
     protected boolean isFlying = false;
+    protected boolean canFly = true;
     protected boolean isInvisible = false;
     protected MyPet myPet;
     protected int jumpDelay = 0;
     protected int idleSoundTimer = 0;
+    protected int flyCheckCounter = 0;
+    protected int sitCounter = 0;
     protected AbstractNavigation petNavigation;
-    Ride rideSkill = null;
+    protected Sit sitPathfinder;
+    protected float jumpPower = 0;
+    protected int donatorParticleCounter = 0;
+    protected float limitCounter = 0;
 
-    int donatorParticleCounter = 0;
-
-    private static Field jump = null;
-
-    static {
-        try {
-            jump = EntityLiving.class.getDeclaredField("bc");
-            jump.setAccessible(true);
-        } catch (NoSuchFieldException e) {
-            e.printStackTrace();
-        }
-    }
+    private static Field jump = ReflectionUtil.getField(EntityLiving.class, "bc");
 
     public EntityMyPet(World world, MyPet myPet) {
         super(world);
@@ -99,12 +104,12 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
 
             this.myPet = myPet;
             this.isMyPet = true;
-            this.rideSkill = myPet.getSkills().getSkill(Ride.class).get();
-            this.petPathfinderSelector = new AIGoalSelector();
-            this.petTargetSelector = new AIGoalSelector();
+            this.petPathfinderSelector = new AIGoalSelector(0);
+            this.petTargetSelector = new AIGoalSelector(Configuration.Entity.SKIP_TARGET_AI_TICKS);
             this.walkSpeed = MyPetApi.getMyPetInfo().getSpeed(myPet.getPetType());
             this.petNavigation = new VanillaNavigation(this);
-            this.getAttributeInstance(GenericAttributes.maxHealth).setValue(myPet.getMaxHealth());
+            this.sitPathfinder = new Sit(this);
+            this.getAttributeInstance(GenericAttributes.maxHealth).setValue(Integer.MAX_VALUE);
             this.setHealth((float) myPet.getHealth());
             this.updateNameTag();
             this.getAttributeInstance(GenericAttributes.MOVEMENT_SPEED).setValue(walkSpeed);
@@ -121,15 +126,15 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
 
     public void setPathfinder() {
         petPathfinderSelector.addGoal("Float", new Float(this));
+        petPathfinderSelector.addGoal("Sit", sitPathfinder);
         petPathfinderSelector.addGoal("Sprint", new Sprint(this, 0.25F));
         petPathfinderSelector.addGoal("RangedTarget", new RangedAttack(this, -0.1F, 12.0F));
-        petPathfinderSelector.addGoal("MeleeAttack", new MeleeAttack(this, 0.1F, 1.5, 20));
+        petPathfinderSelector.addGoal("MeleeAttack", new MeleeAttack(this, 0.1F, this.width + 1.3, 20));
         petPathfinderSelector.addGoal("Control", new Control(this, 0.1F));
-        petPathfinderSelector.addGoal("FollowOwner", new FollowOwner(this, Configuration.Misc.MYPET_FOLLOW_START_DISTANCE, 2.0F, 16F));
+        petPathfinderSelector.addGoal("FollowOwner", new FollowOwner(this, Configuration.Entity.MYPET_FOLLOW_START_DISTANCE, 2.0F, 16F));
         petPathfinderSelector.addGoal("LookAtPlayer", new LookAtPlayer(this, 8.0F));
         petPathfinderSelector.addGoal("RandomLockaround", new RandomLookaround(this));
         petTargetSelector.addGoal("OwnerHurtByTarget", new OwnerHurtByTarget(this));
-        petTargetSelector.addGoal("OwnerHurtTarget", new OwnerHurtTarget(this));
         petTargetSelector.addGoal("HurtByTarget", new HurtByTarget(this));
         petTargetSelector.addGoal("ControlTarget", new ControlTarget(this, 1));
         petTargetSelector.addGoal("AggressiveTarget", new BehaviorAggressiveTarget(this, 15));
@@ -204,7 +209,11 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
     }
 
     public void setTarget(LivingEntity entity, TargetPriority priority) {
-        if (entity == null || entity.isDead() || entity instanceof ArmorStand) {
+        if (entity == null || entity.isDead() || entity instanceof ArmorStand || !(entity instanceof CraftLivingEntity)) {
+            forgetTarget();
+            return;
+        }
+        if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), entity)) {
             forgetTarget();
             return;
         }
@@ -226,14 +235,18 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
     public void updateNameTag() {
         try {
             if (getCustomNameVisible()) {
-                String prefix = Configuration.Name.OVERHEAD_PREFIX;
-                String suffix = Configuration.Name.OVERHEAD_SUFFIX;
+                String prefix = Configuration.Name.Tag.PREFIX;
+                String suffix = Configuration.Name.Tag.SUFFIX;
                 prefix = prefix.replace("<owner>", getOwner().getName());
                 prefix = prefix.replace("<level>", "" + getMyPet().getExperience().getLevel());
                 suffix = suffix.replace("<owner>", getOwner().getName());
                 suffix = suffix.replace("<level>", "" + getMyPet().getExperience().getLevel());
                 this.setCustomNameVisible(getCustomNameVisible());
-                super.setCustomName(Util.cutString(prefix + myPet.getPetName() + suffix, 64));
+                String name = myPet.getPetName();
+                if (!Permissions.has(getOwner(), "MyPet.command.name.color")) {
+                    name = ChatColor.stripColor(name);
+                }
+                super.setCustomName(Util.cutString(prefix + name + suffix, 64));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -251,32 +264,20 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
 
     @Override
     public boolean getCustomNameVisible() {
-        return Configuration.Name.OVERHEAD_NAME;
+        return Configuration.Name.Tag.SHOW;
     }
 
     @Override
     public void setCustomNameVisible(boolean ignored) {
-        super.setCustomNameVisible(Configuration.Name.OVERHEAD_NAME);
+        super.setCustomNameVisible(Configuration.Name.Tag.SHOW);
     }
 
     public boolean canMove() {
-        return true;
+        return !sitPathfinder.isSitting();
     }
 
     public double getWalkSpeed() {
         return walkSpeed;
-    }
-
-    public boolean isCollidable() {
-        return false;
-    }
-
-    @Override
-    public void collide(Entity entity) {
-        if (getOwner().equals(entity)) {
-            return;
-        }
-        super.collide(entity);
     }
 
     public boolean canEat(ItemStack itemstack) {
@@ -290,7 +291,7 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
     }
 
     public boolean canEquip() {
-        return Permissions.hasExtendedLegacy(getOwner().getPlayer(), "MyPet.extended.equip") && canUseItem();
+        return Permissions.hasExtended(getOwner().getPlayer(), "MyPet.extended.equip") && canUseItem();
     }
 
     public boolean canUseItem() {
@@ -311,7 +312,7 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
 
     @Override
     public void showPotionParticles(Color color) {
-        getDataWatcher().set(potionParticleWatcher, (byte) color.asRGB());
+        getDataWatcher().set(POTION_PARTICLE_WATCHER, (byte) color.asRGB());
     }
 
     @Override
@@ -320,7 +321,7 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
         if (!effects.isEmpty()) {
             potionEffects = PotionUtil.a(effects.values());
         }
-        getDataWatcher().set(potionParticleWatcher, (byte) potionEffects);
+        getDataWatcher().set(POTION_PARTICLE_WATCHER, (byte) potionEffects);
     }
 
     public MyPetPlayer getOwner() {
@@ -336,7 +337,7 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
             double damage = isMyPet() ? myPet.getDamage() : 0;
             if (entity instanceof EntityPlayer) {
                 Player victim = (Player) entity.getBukkitEntity();
-                if (!MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), victim, true)) {
+                if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), victim, true)) {
                     if (myPet.hasTarget()) {
                         setGoalTarget(null);
                     }
@@ -352,6 +353,38 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
 
     @Override
     public void updateVisuals() {
+    }
+
+    public boolean toggleSitting() {
+        MyPetSitEvent sitEvent = new MyPetSitEvent(getMyPet(), this.sitPathfinder.isSitting() ? MyPetSitEvent.Action.Follow : MyPetSitEvent.Action.Stay);
+        Bukkit.getPluginManager().callEvent(sitEvent);
+        if (!sitEvent.isCancelled()) {
+            this.sitPathfinder.toggleSitting();
+            if (this.sitPathfinder.isSitting()) {
+                getOwner().sendMessage(Util.formatText(Translation.getString("Message.Sit.Stay", myPet.getOwner()), getMyPet().getPetName()));
+            } else {
+                getOwner().sendMessage(Util.formatText(Translation.getString("Message.Sit.Follow", myPet.getOwner()), getMyPet().getPetName()));
+            }
+            sitCounter = 0;
+        }
+        return !sitEvent.isCancelled();
+    }
+
+    @Override
+    public void setSitting(boolean sitting) {
+        if (isSitting() != sitting) {
+            MyPetSitEvent sitEvent = new MyPetSitEvent(getMyPet(), sitting ? MyPetSitEvent.Action.Follow : MyPetSitEvent.Action.Stay);
+            Bukkit.getPluginManager().callEvent(sitEvent);
+            if (!sitEvent.isCancelled()) {
+                this.sitPathfinder.toggleSitting();
+                sitCounter = 0;
+            }
+        }
+    }
+
+    @Override
+    public boolean isSitting() {
+        return this.sitPathfinder.isSitting();
     }
 
     @Override
@@ -376,24 +409,19 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
      * false: no reaction on rightclick
      */
     public boolean handlePlayerInteraction(final EntityHuman entityhuman, EnumHand enumhand, final ItemStack itemStack) {
-        if (enumhand == EnumHand.OFF_HAND) {
-            if (itemStack != null) {
-                if (itemStack.getItem() == Items.LEAD) {
-                    ((WorldServer) this.world).getTracker().a(this, new PacketPlayOutAttachEntity(this, null));
-                    entityhuman.a(EnumHand.OFF_HAND, null);
-                    new BukkitRunnable() {
-                        public void run() {
-                            if (entityhuman instanceof EntityPlayer) {
-                                entityhuman.a(EnumHand.OFF_HAND, itemStack);
-                                Player p = (Player) entityhuman.getBukkitEntity();
-                                if (!p.isOnline()) {
-                                    p.saveData();
-                                }
-                            }
-                        }
-                    }.runTaskLater(MyPetApi.getPlugin(), 5);
+        new BukkitRunnable() {
+            public void run() {
+                EntityPlayer player = ((EntityPlayer) entityhuman);
+                if (player.getBukkitEntity().isOnline()) {
+                    player.updateInventory(entityhuman.defaultContainer);
                 }
             }
+        }.runTaskLater(MyPetApi.getPlugin(), 5);
+        if (itemStack != null && itemStack.getItem() == Items.LEAD) {
+            ((EntityPlayer) entityhuman).playerConnection.sendPacket(new PacketPlayOutAttachEntity(this, null));
+        }
+
+        if (enumhand == EnumHand.OFF_HAND) {
             return true;
         }
 
@@ -401,57 +429,41 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
 
         if (isMyPet() && myPet.getOwner().equals(entityhuman)) {
             if (Configuration.Skilltree.Skill.Ride.RIDE_ITEM.compare(itemStack)) {
-                if (myPet.getSkills().isSkillActive(Ride.class) && canMove()) {
-                    if (itemStack != null && itemStack.getItem() == Items.LEAD) {
-                        ((WorldServer) this.world).getTracker().a(this, new PacketPlayOutAttachEntity(this, null));
-                        entityhuman.a(EnumHand.MAIN_HAND, null);
-                        new BukkitRunnable() {
-                            public void run() {
-                                if (entityhuman instanceof EntityPlayer) {
-                                    entityhuman.a(EnumHand.MAIN_HAND, itemStack);
-                                    Player p = (Player) entityhuman.getBukkitEntity();
-                                    if (!p.isOnline()) {
-                                        p.saveData();
-                                    }
-                                }
-                            }
-                        }.runTaskLater(MyPetApi.getPlugin(), 5);
-                    }
-                    if (Permissions.hasExtendedLegacy(owner, "MyPet.extended.ride")) {
+                if (myPet.getSkills().isActive(RideImpl.class) && canMove()) {
+                    if (Permissions.hasExtended(owner, "MyPet.extended.ride")) {
                         ((CraftPlayer) owner).getHandle().startRiding(this);
                         return true;
                     } else {
-                        getMyPet().getOwner().sendMessage(Translation.getString("Message.No.CanUse", myPet.getOwner().getLanguage()));
+                        getOwner().sendMessage(Translation.getString("Message.No.CanUse", myPet.getOwner()), 2000);
                     }
                 }
             }
             if (Configuration.Skilltree.Skill.CONTROL_ITEM.compare(itemStack)) {
-                if (myPet.getSkills().isSkillActive(de.Keyle.MyPet.skill.skills.Control.class)) {
+                if (myPet.getSkills().isActive(ControlImpl.class)) {
                     return true;
                 }
             }
             if (itemStack != null) {
-                if (itemStack.getItem() == Items.NAME_TAG && Permissions.hasLegacy(getOwner(), "MyPet.command.name")) {
-                    if (itemStack.hasName()) {
-                        final String name = itemStack.getName();
-                        getMyPet().setPetName(name);
-                        EntityMyPet.super.setCustomName("-");
-                        myPet.getOwner().sendMessage(Util.formatText(Translation.getString("Message.Command.Name.New", myPet.getOwner()), name));
-                        if (!entityhuman.abilities.canInstantlyBuild) {
-                            --itemStack.count;
-                        }
-                        if (itemStack.count <= 0) {
-                            entityhuman.inventory.setItem(entityhuman.inventory.itemInHandIndex, null);
-                        }
-                        new BukkitRunnable() {
-                            public void run() {
-                                updateNameTag();
-                            }
-                        }.runTaskLater(MyPetApi.getPlugin(), 1L);
-                        return true;
+                if (itemStack.getItem() == Items.NAME_TAG && itemStack.hasName() && Permissions.has(getOwner(), "MyPet.command.name") && Permissions.hasExtended(getOwner(), "MyPet.extended.nametag")) {
+                    final String name = itemStack.getName();
+                    getMyPet().setPetName(name);
+                    EntityMyPet.super.setCustomName("-");
+                    myPet.getOwner().sendMessage(Util.formatText(Translation.getString("Message.Command.Name.New", myPet.getOwner()), name));
+                    if (!entityhuman.abilities.canInstantlyBuild) {
+                        --itemStack.count;
                     }
-                } else if (canEat(itemStack) && canUseItem()) {
-                    if (owner != null && !Permissions.hasExtendedLegacy(owner, "MyPet.extended.feed")) {
+                    if (itemStack.count <= 0) {
+                        entityhuman.inventory.setItem(entityhuman.inventory.itemInHandIndex, null);
+                    }
+                    new BukkitRunnable() {
+                        public void run() {
+                            updateNameTag();
+                        }
+                    }.runTaskLater(MyPetApi.getPlugin(), 1L);
+                    return true;
+                }
+                if (canEat(itemStack) && canUseItem()) {
+                    if (owner != null && !Permissions.hasExtended(owner, "MyPet.extended.feed")) {
                         return false;
                     }
                     if (this.petTargetSelector.hasGoal("DuelTarget")) {
@@ -460,49 +472,57 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
                             return true;
                         }
                     }
-                    int addHunger = Configuration.HungerSystem.HUNGER_SYSTEM_POINTS_PER_FEED;
-                    if (getHealth() < getMaxHealth()) {
-                        if (!entityhuman.abilities.canInstantlyBuild) {
-                            --itemStack.count;
+                    boolean used = false;
+                    double saturation = Configuration.HungerSystem.HUNGER_SYSTEM_SATURATION_PER_FEED;
+                    if (saturation > 0) {
+                        if (myPet.getSaturation() < 100) {
+                            MyPetFeedEvent feedEvent = new MyPetFeedEvent(getMyPet(), CraftItemStack.asCraftMirror(itemStack), saturation, MyPetFeedEvent.Result.Eat);
+                            Bukkit.getPluginManager().callEvent(feedEvent);
+                            if (!feedEvent.isCancelled()) {
+                                saturation = feedEvent.getSaturation();
+                                double missingSaturation = 100 - myPet.getSaturation();
+                                myPet.setSaturation(myPet.getSaturation() + saturation);
+                                saturation = Math.max(0, saturation - missingSaturation);
+                                used = true;
+                            }
                         }
-                        addHunger -= Math.min(3, getMaxHealth() - getHealth()) * 2;
-                        this.heal(Math.min(3, getMaxHealth() - getHealth()), RegainReason.EATING);
-                        if (itemStack.count <= 0) {
-                            entityhuman.inventory.setItem(entityhuman.inventory.itemInHandIndex, null);
-                        }
-                        MyPetApi.getPlatformHelper().playParticleEffect(myPet.getLocation().get().add(0, getHeadHeight(), 0), "HEART", 0.5F, 0.5F, 0.5F, 0.5F, 5, 20);
-                    } else if (myPet.getHungerValue() < 100) {
-                        if (!entityhuman.abilities.canInstantlyBuild) {
-                            --itemStack.count;
-                        }
-                        if (itemStack.count <= 0) {
-                            entityhuman.inventory.setItem(entityhuman.inventory.itemInHandIndex, null);
-                        }
-                        MyPetApi.getPlatformHelper().playParticleEffect(myPet.getLocation().get().add(0, getHeadHeight(), 0), "HEART", 0.5F, 0.5F, 0.5F, 0.5F, 5, 20);
                     }
-                    if (addHunger > 0 && myPet.getHungerValue() < 100) {
-                        myPet.setHungerValue(myPet.getHungerValue() + addHunger);
-                        addHunger = 0;
+                    if (saturation > 0) {
+                        if (getHealth() < myPet.getMaxHealth()) {
+                            MyPetFeedEvent feedEvent = new MyPetFeedEvent(getMyPet(), CraftItemStack.asCraftMirror(itemStack), saturation, MyPetFeedEvent.Result.Heal);
+                            Bukkit.getPluginManager().callEvent(feedEvent);
+                            if (!feedEvent.isCancelled()) {
+                                saturation = feedEvent.getSaturation();
+                                float missingHealth = (float) (myPet.getMaxHealth() - getHealth());
+                                this.heal(Math.min((float) saturation, missingHealth), RegainReason.EATING);
+                                used = true;
+                            }
+                        }
                     }
-                    if (addHunger < Configuration.HungerSystem.HUNGER_SYSTEM_POINTS_PER_FEED) {
+
+                    if (used) {
+                        if (!entityhuman.abilities.canInstantlyBuild) {
+                            if (--itemStack.count <= 0) {
+                                entityhuman.inventory.setItem(entityhuman.inventory.itemInHandIndex, null);
+                            }
+                        }
+                        MyPetApi.getPlatformHelper().playParticleEffect(myPet.getLocation().get().add(0, getHeadHeight(), 0), ParticleCompat.HEART.get(), 0.5F, 0.5F, 0.5F, 0.5F, 5, 20);
+
                         return true;
                     }
                 }
-                if (itemStack.getItem() == Items.LEAD) {
-                    ((WorldServer) this.world).getTracker().a(this, new PacketPlayOutAttachEntity(this, null));
-                    entityhuman.a(EnumHand.MAIN_HAND, null);
-                    new BukkitRunnable() {
-                        public void run() {
-                            if (entityhuman instanceof EntityPlayer) {
-                                entityhuman.a(EnumHand.MAIN_HAND, itemStack);
-                                Player p = (Player) entityhuman.getBukkitEntity();
-                                if (!p.isOnline()) {
-                                    p.saveData();
-                                }
-                            }
-                        }
-                    }.runTaskLater(MyPetApi.getPlugin(), 5);
-                }
+            }
+            if (!owner.isSneaking() && !Configuration.Misc.RIGHT_CLICK_COMMAND.isEmpty()) {
+                String command = Configuration.Misc.RIGHT_CLICK_COMMAND;
+                command = command.replaceAll("%pet_name%", myPet.getPetName());
+                command = command.replaceAll("%pet_owner%", myPet.getOwner().getName());
+                command = command.replaceAll("%pet_level%", "" + myPet.getExperience().getLevel());
+                command = command.replaceAll("%pet_status%", "" + myPet.getStatus().name());
+                command = command.replaceAll("%pet_type%", myPet.getPetType().name());
+                command = command.replaceAll("%pet_uuid%", myPet.getUUID().toString());
+                command = command.replaceAll("%pet_world_group%", myPet.getWorldGroup());
+                command = command.replaceAll("%pet_skilltree_name%", myPet.getSkilltree() != null ? myPet.getSkilltree().getName() : "");
+                return owner.performCommand(command);
             }
         } else {
             if (itemStack != null) {
@@ -526,7 +546,6 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
         if (hasRider) {
             if (!isVehicle()) {
                 hasRider = false;
-                //applyLeash();
                 this.P = 0.5F; // climb height -> halfslab
                 Location playerLoc = getOwner().getPlayer().getLocation();
                 Location petLoc = getBukkitEntity().getLocation();
@@ -548,54 +567,72 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
                 }
             }
         }
-        if (!myPet.getOwner().getPlayer().isDead()) {
-            if (getOwner().getPlayer().isSneaking() != isSneaking()) {
+        if (sitPathfinder.isSitting() && sitCounter-- <= 0) {
+            MyPetApi.getPlatformHelper().playParticleEffect(getOwner().getPlayer(), this.getBukkitEntity().getLocation().add(0, getHeadHeight() + 1, 0), ParticleCompat.BARRIER.get(), 0F, 0F, 0F, 5F, 1, 32);
+            sitCounter = 60;
+        }
+        Player p = myPet.getOwner().getPlayer();
+        if (p != null && p.isOnline() && !p.isDead()) {
+            if (p.isSneaking() != isSneaking()) {
                 this.setSneaking(!isSneaking());
             }
             if (Configuration.Misc.INVISIBLE_LIKE_OWNER) {
-                if (!isInvisible && getOwner().getPlayer().hasPotionEffect(PotionEffectType.INVISIBILITY)) {
+                if (!isInvisible && p.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
                     isInvisible = true;
                     getBukkitEntity().addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 1, false));
-                } else if (isInvisible && !getOwner().getPlayer().hasPotionEffect(PotionEffectType.INVISIBILITY)) {
+                } else if (isInvisible && !p.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
                     getBukkitEntity().removePotionEffect(PotionEffectType.INVISIBILITY);
                     isInvisible = false;
                 }
             }
             if (!this.isInvisible() && getOwner().getDonationRank() != DonateCheck.DonationRank.None && donatorParticleCounter-- <= 0) {
                 donatorParticleCounter = 20 + getRandom().nextInt(10);
-                MyPetApi.getPlatformHelper().playParticleEffect(this.getBukkitEntity().getLocation().add(0, 1, 0), "VILLAGER_HAPPY", 0.4F, 0.4F, 0.4F, 0.4F, 5, 10);
+                MyPetApi.getPlatformHelper().playParticleEffect(this.getBukkitEntity().getLocation().add(0, 1, 0), ParticleCompat.VILLAGER_HAPPY.get(), 0.4F, 0.4F, 0.4F, 0.4F, 5, 10);
             }
         }
     }
 
     public void setHealth(float f) {
-        float deltaHealth = getHealth();
-        super.setHealth(f);
-        deltaHealth = getHealth() - deltaHealth;
+        double deltaHealth = getHealth();
+        double maxHealth = myPet.getMaxHealth();
 
-        String msg = myPet.getPetName() + ChatColor.RESET + ": ";
-        if (getHealth() > myPet.getMaxHealth() / 3 * 2) {
-            msg += org.bukkit.ChatColor.GREEN;
-        } else if (getHealth() > myPet.getMaxHealth() / 3) {
-            msg += org.bukkit.ChatColor.YELLOW;
+        boolean silent = this.getAttributeInstance(GenericAttributes.maxHealth).getValue() != maxHealth;
+        this.getAttributeInstance(GenericAttributes.maxHealth).setValue(maxHealth);
+
+        this.datawatcher.set(HEALTH, MathHelper.a(f, 0.0F, (float) maxHealth));
+
+        double health = getHealth();
+        if (deltaHealth > maxHealth) {
+            deltaHealth = 0;
         } else {
-            msg += org.bukkit.ChatColor.RED;
+            deltaHealth = health - deltaHealth;
         }
-        if (getHealth() > 0) {
-            msg += String.format("%1.2f", getHealth()) + org.bukkit.ChatColor.WHITE + "/" + String.format("%1.2f", myPet.getMaxHealth());
 
-            if (!myPet.getOwner().isHealthBarActive()) {
-                if (deltaHealth > 0) {
-                    msg += " (" + ChatColor.GREEN + "+" + String.format("%1.2f", deltaHealth) + ChatColor.RESET + ")";
-                } else {
-                    msg += " (" + ChatColor.RED + String.format("%1.2f", deltaHealth) + ChatColor.RESET + ")";
-                }
+        if (!silent && !Configuration.Misc.DISABLE_ALL_ACTIONBAR_MESSAGES) {
+            String msg = myPet.getPetName() + ChatColor.RESET + ": ";
+            if (health > maxHealth / 3 * 2) {
+                msg += ChatColor.GREEN;
+            } else if (health > maxHealth / 3) {
+                msg += ChatColor.YELLOW;
+            } else {
+                msg += ChatColor.RED;
             }
-        } else {
-            msg += Translation.getString("Name.Dead", getOwner());
-        }
+            if (health > 0) {
+                msg += String.format("%1.2f", health) + ChatColor.WHITE + "/" + String.format("%1.2f", maxHealth);
 
-        MyPetApi.getPlatformHelper().sendMessageActionBar(getOwner().getPlayer(), msg);
+                if (!myPet.getOwner().isHealthBarActive()) {
+                    if (deltaHealth > 0) {
+                        msg += " (" + ChatColor.GREEN + "+" + String.format("%1.2f", deltaHealth) + ChatColor.RESET + ")";
+                    } else {
+                        msg += " (" + ChatColor.RED + String.format("%1.2f", deltaHealth) + ChatColor.RESET + ")";
+                    }
+                }
+            } else {
+                msg += Translation.getString("Name.Dead", getOwner());
+            }
+
+            MyPetApi.getPlatformHelper().sendMessageActionBar(getOwner().getPlayer(), msg);
+        }
     }
 
     protected void initDatawatcher() {
@@ -673,19 +710,6 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
             locY = this.locY;
             speed = 0.8F;
             swimmSpeed = 0.02F;
-            f2 = (float) EnchantmentManager.d(this);
-            if (f2 > 3.0F) {
-                f2 = 3.0F;
-            }
-
-            if (!this.onGround) {
-                f2 *= 0.5F;
-            }
-
-            if (f2 > 0.0F) {
-                speed += (0.54600006F - speed) * f2 / 3.0F;
-                swimmSpeed += (speedModifier * 1.0F - swimmSpeed) * f2 / 3.0F;
-            }
 
             this.a(motionSideways, motionForward, swimmSpeed);
             this.move(this.motX, this.motY, this.motZ);
@@ -816,7 +840,11 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
      */
     public boolean a(EntityHuman entityhuman, EnumHand enumhand, ItemStack itemstack) {
         try {
-            return handlePlayerInteraction(entityhuman, enumhand, itemstack);
+            boolean result = handlePlayerInteraction(entityhuman, enumhand, itemstack);
+            if (!result && getMyPet().getOwner().equals(entityhuman) && entityhuman.isSneaking()) {
+                result = toggleSitting();
+            }
+            return result;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -906,18 +934,11 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
         }
 
         this.world.methodProfiler.a("ai");
-        if (this.cf()) {
-            this.bc = false;
-            this.bd = 0.0F;
-            this.be = 0.0F;
-            this.bf = 0.0F;
-        } else if (this.co()) {
-            this.world.methodProfiler.a("newAi");
-            this.doMyPetTick();
-            this.world.methodProfiler.b();
-        }
-
+        this.world.methodProfiler.a("newAi");
+        this.doMyPetTick();
         this.world.methodProfiler.b();
+        this.world.methodProfiler.b();
+
         this.world.methodProfiler.a("jump");
         if (this.bc) {
             if (this.isInWater() || this.an()) {
@@ -948,9 +969,39 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
      */
     protected void o(Entity entity) {
         // don't allow anything but the owner to ride this entity
-        if (entity instanceof EntityPlayer && getOwner().equals(entity)) {
+        Ride rideSkill = myPet.getSkills().get(RideImpl.class);
+        if (rideSkill != null && entity instanceof EntityPlayer && getOwner().equals(entity)) {
             super.o(entity);
+            if (this instanceof IJumpable) {
+                double factor = 1;
+                if (Configuration.HungerSystem.USE_HUNGER_SYSTEM && Configuration.HungerSystem.AFFECT_RIDE_SPEED) {
+                    factor = Math.log10(myPet.getSaturation()) / 2;
+                }
+                getAttributeInstance(GenericAttributes.MOVEMENT_SPEED).setValue((0.22222F * (1F + (rideSkill.getSpeedIncrease().getValue() / 100F))) * factor);
+            }
         }
+    }
+
+    /**
+     * -> unmount(Entity)
+     */
+    protected void p(Entity entity) {
+        super.p(entity);
+        PlatformHelper platformHelper = (PlatformHelper) MyPetApi.getPlatformHelper();
+        AxisAlignedBB bb = entity.getBoundingBox();
+        bb = getBBAtPosition(bb, this.locX, this.locY, this.locZ);
+        if (!platformHelper.canSpawn(getBukkitEntity().getLocation(), bb)) {
+            entity.a(this, true);
+        } else {
+            entity.setPosition(locX, locY, locZ);
+        }
+    }
+
+    protected AxisAlignedBB getBBAtPosition(AxisAlignedBB bb, double x, double y, double z) {
+        double width = (bb.d - bb.a) / 2;
+        double height = bb.e - bb.b;
+        double depth = (bb.f - bb.c) / 2;
+        return new AxisAlignedBB(x - width, y, z - depth, x + width, y + height, z + width);
     }
 
     /**
@@ -964,10 +1015,33 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
             if (isAlive()) {
                 getEntitySenses().a(); // sensing
 
+                Player p = getOwner().getPlayer();
+                if (p == null || !p.isOnline()) {
+
+                    MyPetApi.getLogger().warning("==========================================");
+                    MyPetApi.getLogger().warning("Please report this to the MyPet developer!");
+
+                    MyPetApi.getLogger().warning("MyPet: " + getMyPet());
+                    MyPetApi.getLogger().warning("MyPetOwner: " + getOwner());
+                    MyPetApi.getLogger().warning("Owner online: " + (getOwner() != null ? getOwner().isOnline() : "null"));
+
+                    MyPetApi.getLogger().warning("==========================================");
+                    this.die();
+                    return;
+                }
+
                 if (!hasRider()) {
                     petTargetSelector.tick(); // target selector
                     petPathfinderSelector.tick(); // pathfinder selector
                     petNavigation.tick(); // navigation
+                }
+
+                Ride rideSkill = myPet.getSkills().get(RideImpl.class);
+                if (this.onGround && rideSkill.getFlyLimit().getValue().doubleValue() > 0) {
+                    limitCounter += rideSkill.getFlyRegenRate().getValue().doubleValue();
+                    if (limitCounter > rideSkill.getFlyLimit().getValue().doubleValue()) {
+                        limitCounter = rideSkill.getFlyLimit().getValue().floatValue();
+                    }
                 }
             }
 
@@ -1020,6 +1094,12 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
 
         EntityLiving passenger = (EntityLiving) this.bt();
 
+        Ride rideSkill = myPet.getSkills().get(RideImpl.class);
+        if (rideSkill == null || !rideSkill.getActive().getValue()) {
+            passenger.stopRiding();
+            return;
+        }
+
         //apply pitch & yaw
         this.lastYaw = (this.yaw = passenger.yaw);
         this.pitch = passenger.pitch * 0.5F;
@@ -1037,29 +1117,93 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
         // sideways is slower too but not as slow as backwards
         motionSideways *= 0.85F;
 
-        float speed = 0.22222F;
-        double jumpHeight = 0.3D;
+        float speed = 0.22222F * (1F + (rideSkill.getSpeedIncrease().getValue() / 100F));
+        double jumpHeight = Util.clamp(1 + rideSkill.getJumpHeight().getValue().doubleValue(), 0, 10);
+        float ascendSpeed = 0.2f;
 
-        if (rideSkill != null) {
-            speed *= 1F + (rideSkill.getSpeedPercent() / 100F);
-            jumpHeight = rideSkill.getJumpHeight() * 0.18D;
-        }
-
-        if (Configuration.HungerSystem.USE_HUNGER_SYSTEM) {
-            double factor = Math.log10(myPet.getHungerValue()) / 2;
+        if (Configuration.HungerSystem.USE_HUNGER_SYSTEM && Configuration.HungerSystem.AFFECT_RIDE_SPEED) {
+            double factor = Math.log10(myPet.getSaturation()) / 2;
             speed *= factor;
             jumpHeight *= factor;
+            ascendSpeed *= factor;
         }
 
         ride(motionSideways, motionForward, speed); // apply motion
 
-        // jump when the player jumps
-        if (jump != null && onGround) {
-            try {
-                if (jump.getBoolean(passenger)) {
-                    this.motY = Math.sqrt(jumpHeight);
+        // throw player move event
+        if (Configuration.Misc.THROW_PLAYER_MOVE_EVENT_WHILE_RIDING && !(this instanceof EntityMyHorse)) {
+            double delta = Math.pow(this.locX - this.lastX, 2.0D) + Math.pow(this.locY - this.lastY, 2.0D) + Math.pow(this.locZ - this.lastZ, 2.0D);
+            float deltaAngle = Math.abs(this.yaw - lastYaw) + Math.abs(this.pitch - lastPitch);
+            if (delta > 0.00390625D || deltaAngle > 10.0F) {
+                Location to = getBukkitEntity().getLocation();
+                Location from = new Location(world.getWorld(), this.lastX, this.lastY, this.lastZ, this.lastYaw, this.lastPitch);
+                if (from.getX() != Double.MAX_VALUE) {
+                    Location oldTo = to.clone();
+                    PlayerMoveEvent event = new PlayerMoveEvent((Player) passenger.getBukkitEntity(), from, to);
+                    Bukkit.getPluginManager().callEvent(event);
+                    if (event.isCancelled()) {
+                        passenger.getBukkitEntity().teleport(from);
+                        return;
+                    }
+                    if ((!oldTo.equals(event.getTo())) && (!event.isCancelled())) {
+                        passenger.getBukkitEntity().teleport(event.getTo(), PlayerTeleportEvent.TeleportCause.UNKNOWN);
+                        return;
+                    }
                 }
-            } catch (IllegalAccessException ignored) {
+            }
+        }
+
+        if (jump != null && this.isVehicle()) {
+            boolean doJump = false;
+            if (this instanceof IJumpable) {
+                if (this.jumpPower > 0.0F) {
+                    doJump = true;
+                    this.jumpPower = 0.0F;
+                } else if (!this.onGround) {
+                    try {
+                        doJump = jump.getBoolean(passenger);
+                    } catch (IllegalAccessException ignored) {
+                    }
+                }
+            } else {
+                if (jump != null) {
+                    try {
+                        doJump = jump.getBoolean(passenger);
+                    } catch (IllegalAccessException ignored) {
+                    }
+                }
+            }
+
+            if (doJump) {
+                if (onGround) {
+                    jumpHeight = new BigDecimal(jumpHeight).setScale(1, BigDecimal.ROUND_HALF_UP).doubleValue();
+                    String jumpHeightString = JumpHelper.JUMP_FORMAT.format(jumpHeight);
+                    Double jumpVelocity = JumpHelper.JUMP_MAP.get(jumpHeightString);
+                    jumpVelocity = jumpVelocity == null ? 0.44161199999510264 : jumpVelocity;
+                    if (this instanceof IJumpable) {
+                        getAttributeInstance(EntityHorse.attributeJumpStrength).setValue(jumpVelocity);
+                    }
+                    this.motY = jumpVelocity;
+                } else if (rideSkill.getCanFly().getValue()) {
+                    if (limitCounter <= 0 && rideSkill.getFlyLimit().getValue().doubleValue() > 0) {
+                        canFly = false;
+                    } else if (flyCheckCounter-- <= 0) {
+                        canFly = MyPetApi.getHookHelper().canMyPetFlyAt(getBukkitEntity().getLocation());
+                        if (canFly && !Permissions.hasExtended(getOwner().getPlayer(), "MyPet.extended.ride.fly")) {
+                            canFly = false;
+                        }
+                        flyCheckCounter = 5;
+                    }
+                    if (canFly) {
+                        if (this.motY < ascendSpeed) {
+                            this.motY = ascendSpeed;
+                            this.fallDistance = 0;
+                            this.isFlying = true;
+                        }
+                    }
+                }
+            } else {
+                flyCheckCounter = 0;
             }
         }
 
@@ -1069,7 +1213,12 @@ public abstract class EntityMyPet extends EntityCreature implements IAnimal, MyP
             double dZ = locZ - lastZ;
             if (dX != 0 || dY != 0 || dZ != 0) {
                 double distance = Math.sqrt(dX * dX + dY * dY + dZ * dZ);
-                myPet.decreaseHunger(Configuration.Skilltree.Skill.Ride.HUNGER_PER_METER * distance);
+                if (isFlying && rideSkill.getFlyLimit().getValue().doubleValue() > 0) {
+                    limitCounter -= distance;
+                }
+                myPet.decreaseSaturation(Configuration.Skilltree.Skill.Ride.HUNGER_PER_METER * distance);
+                double factor = Math.log10(myPet.getSaturation()) / 2;
+                getAttributeInstance(GenericAttributes.MOVEMENT_SPEED).setValue((0.22222F * (1F + (rideSkill.getSpeedIncrease().getValue() / 100F))) * factor);
             }
         }
     }

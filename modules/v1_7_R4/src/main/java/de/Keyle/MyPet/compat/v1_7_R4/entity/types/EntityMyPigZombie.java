@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -124,17 +124,15 @@ public class EntityMyPigZombie extends EntityMyPet {
 
     @Override
     public void updateVisuals() {
-        this.datawatcher.watch(12, getMyPet().isBaby() ? 1 : 0);
+        this.datawatcher.watch(12, (byte) (getMyPet().isBaby() ? 1 : 0));
 
-        Bukkit.getScheduler().runTaskLater(MyPetApi.getPlugin(), new Runnable() {
-            public void run() {
-                if (getMyPet().getStatus() == PetState.Here) {
-                    for (EquipmentSlot slot : EquipmentSlot.values()) {
-                        if (slot == EquipmentSlot.OffHand) {
-                            continue;
-                        }
-                        setPetEquipment(slot.getSlotId(), CraftItemStack.asNMSCopy(getMyPet().getEquipment(slot)));
+        Bukkit.getScheduler().runTaskLater(MyPetApi.getPlugin(), () -> {
+            if (getMyPet().getStatus() == PetState.Here) {
+                for (EquipmentSlot slot : EquipmentSlot.values()) {
+                    if (slot == EquipmentSlot.OffHand) {
+                        continue;
                     }
+                    setPetEquipment(slot.getSlotId(), CraftItemStack.asNMSCopy(getMyPet().getEquipment(slot)));
                 }
             }
         }, 5L);

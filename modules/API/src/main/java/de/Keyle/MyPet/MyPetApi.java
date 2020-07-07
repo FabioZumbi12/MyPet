@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -23,16 +23,24 @@ package de.Keyle.MyPet;
 import de.Keyle.MyPet.api.PlatformHelper;
 import de.Keyle.MyPet.api.entity.EntityRegistry;
 import de.Keyle.MyPet.api.entity.MyPetInfo;
+import de.Keyle.MyPet.api.entity.leashing.LeashFlagManager;
 import de.Keyle.MyPet.api.plugin.MyPetPlugin;
 import de.Keyle.MyPet.api.repository.MyPetManager;
 import de.Keyle.MyPet.api.repository.PlayerManager;
 import de.Keyle.MyPet.api.repository.Repository;
+import de.Keyle.MyPet.api.skill.SkillManager;
+import de.Keyle.MyPet.api.skill.skilltree.SkilltreeManager;
 import de.Keyle.MyPet.api.util.CompatUtil;
-import de.Keyle.MyPet.api.util.hooks.HookManager;
+import de.Keyle.MyPet.api.util.ErrorReporter;
+import de.Keyle.MyPet.api.util.hooks.HookHelper;
+import de.Keyle.MyPet.api.util.hooks.PluginHookManager;
+import de.Keyle.MyPet.api.util.logger.MyPetLogger;
+import de.Keyle.MyPet.api.util.service.ServiceManager;
 
 import java.util.logging.Logger;
 
 public class MyPetApi {
+
     private static MyPetPlugin plugin;
 
     protected static void setPlugin(MyPetPlugin plugin) {
@@ -56,6 +64,9 @@ public class MyPetApi {
         return plugin.getRepository();
     }
 
+    /**
+     * @return the pluginlogger or a logger instance called MyPet
+     */
     public static Logger getLogger() {
         if (plugin != null) {
             return plugin.getLogger();
@@ -64,31 +75,101 @@ public class MyPetApi {
         }
     }
 
+    /**
+     * @return the pluginlogger or a logger instance called MyPet
+     */
+    public static MyPetLogger getMyPetLogger() {
+        return plugin != null ? (MyPetLogger) plugin.getLogger() : null;
+    }
+
+    /**
+     * @return instance of the Bukkit plattform helper
+     */
     public static PlatformHelper getPlatformHelper() {
         return plugin.getPlatformHelper();
     }
 
+    /**
+     * @return instance of the error reporter
+     */
+    public static ErrorReporter getErrorReporter() {
+        return plugin.getErrorReporter();
+    }
+
+    /**
+     * @return you can find info about pet types here
+     */
     public static MyPetInfo getMyPetInfo() {
         return plugin.getMyPetInfo();
     }
 
+    /**
+     * @return register and create entities here
+     */
     public static EntityRegistry getEntityRegistry() {
         return plugin.getEntityRegistry();
     }
 
+    /**
+     * @return bukkit version compatibility manager
+     */
     public static CompatUtil getCompatUtil() {
         return plugin.getCompatUtil();
     }
 
+    /**
+     * @return MyPet player manager
+     */
     public static PlayerManager getPlayerManager() {
         return plugin.getPlayerManager();
     }
 
+    /**
+     * @return MyPet manager
+     */
     public static MyPetManager getMyPetManager() {
         return plugin.getMyPetManager();
     }
 
-    public static HookManager getHookManager() {
-        return plugin.getHookManager();
+    /**
+     * @return you can find plugin hook helper functions here
+     */
+    public static HookHelper getHookHelper() {
+        return plugin.getHookHelper();
+    }
+
+    /**
+     * @return instance of the plugin hook manager
+     */
+    public static PluginHookManager getPluginHookManager() {
+        return plugin.getPluginHookManager();
+    }
+
+    /**
+     * @return instance of the plugin hook manager
+     */
+    public static ServiceManager getServiceManager() {
+        return plugin.getServiceManager();
+    }
+
+    /**
+     * @return instance of the skilltree manager
+     */
+    public static SkilltreeManager getSkilltreeManager() {
+        return getServiceManager().getService(SkilltreeManager.class).get();
+    }
+
+    /**
+     * @return instance of the skill manager
+     */
+    public static SkillManager getSkillManager() {
+        return getServiceManager().getService(SkillManager.class).get();
+    }
+
+    /**
+     * @return instance of the leashflag manager
+     */
+    public static LeashFlagManager getLeashFlagManager() {
+        return getServiceManager().getService(LeashFlagManager.class).get();
     }
 }

@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -23,9 +23,6 @@ package de.Keyle.MyPet.api.entity.types;
 import de.Keyle.MyPet.api.entity.DefaultInfo;
 import de.Keyle.MyPet.api.entity.MyPet;
 
-import static de.Keyle.MyPet.api.entity.LeashFlag.Impossible;
-import static org.bukkit.Material.ENDER_STONE;
-
-@DefaultInfo(food = {ENDER_STONE}, leashFlags = {Impossible})
+@DefaultInfo(food = {"end_stone"}, leashFlags = {"Impossible"})
 public interface MyEnderDragon extends MyPet {
 }

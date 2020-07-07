@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -20,6 +20,8 @@
 
 package de.Keyle.MyPet.compat.v1_8_R2.util.inventory;
 
+import de.Keyle.MyPet.api.util.Compat;
+import de.Keyle.MyPet.api.util.ReflectionUtil;
 import de.keyle.knbt.*;
 import net.minecraft.server.v1_8_R2.*;
 import org.bukkit.craftbukkit.v1_8_R2.inventory.CraftItemStack;
@@ -29,14 +31,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+@Compat("v1_8_R2")
 public class ItemStackNBTConverter {
-    private static Field TAG_LIST_LIST = null;
+    private static Field TAG_LIST_LIST = ReflectionUtil.getField(NBTTagList.class, "list");
 
-    public static TagCompound itemStackToCompund(org.bukkit.inventory.ItemStack itemStack) {
-        return itemStackToCompund(CraftItemStack.asNMSCopy(itemStack));
+    public static TagCompound itemStackToCompound(org.bukkit.inventory.ItemStack itemStack) {
+        return itemStackToCompound(CraftItemStack.asNMSCopy(itemStack));
     }
 
-    public static TagCompound itemStackToCompund(ItemStack itemStack) {
+    public static TagCompound itemStackToCompound(ItemStack itemStack) {
         TagCompound compound = new TagCompound();
 
         compound.getCompoundData().put("id", new TagShort((short) Item.getId(itemStack.getItem())));
@@ -49,7 +52,7 @@ public class ItemStackNBTConverter {
         return compound;
     }
 
-    public static ItemStack compundToItemStack(TagCompound compound) {
+    public static ItemStack compoundToItemStack(TagCompound compound) {
         int id = compound.getAs("id", TagShort.class).getShortData();
         int count = compound.getAs("Count", TagByte.class).getByteData();
         int damage = compound.getAs("Damage", TagShort.class).getShortData();
@@ -123,15 +126,6 @@ public class ItemStackNBTConverter {
             case 8:
                 return new TagString(((NBTTagString) vanillaTag).a_());
             case 9:
-                if (TAG_LIST_LIST == null) {
-                    try {
-                        TAG_LIST_LIST = NBTTagList.class.getDeclaredField("list");
-                        TAG_LIST_LIST.setAccessible(true);
-                    } catch (NoSuchFieldException e) {
-                        e.printStackTrace();
-                    }
-                }
-
                 NBTTagList tagList = (NBTTagList) vanillaTag;
                 List compoundList = new ArrayList();
                 try {

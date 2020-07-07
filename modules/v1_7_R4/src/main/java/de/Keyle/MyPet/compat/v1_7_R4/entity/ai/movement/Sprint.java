@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -24,12 +24,15 @@ import de.Keyle.MyPet.MyPetApi;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.ai.AIGoal;
 import de.Keyle.MyPet.api.entity.ai.navigation.AbstractNavigation;
+import de.Keyle.MyPet.api.util.Compat;
 import de.Keyle.MyPet.compat.v1_7_R4.entity.EntityMyPet;
+import de.Keyle.MyPet.skill.skills.SprintImpl;
 import net.minecraft.server.v1_7_R4.EntityLiving;
 import org.bukkit.craftbukkit.v1_7_R4.entity.CraftLivingEntity;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public class Sprint extends AIGoal {
+@Compat("v1_7_R4")
+public class Sprint implements AIGoal {
     private MyPet myPet;
     private final EntityMyPet petEntity;
     private float walkSpeedModifier;
@@ -45,7 +48,7 @@ public class Sprint extends AIGoal {
 
     @Override
     public boolean shouldStart() {
-        if (!myPet.getSkills().isSkillActive(de.Keyle.MyPet.skill.skills.Sprint.class)) {
+        if (!myPet.getSkills().isActive(SprintImpl.class)) {
             return false;
         }
         if (petEntity.getMyPet().getDamage() <= 0) {

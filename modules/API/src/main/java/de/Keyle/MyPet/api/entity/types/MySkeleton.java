@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -24,11 +24,17 @@ import de.Keyle.MyPet.api.entity.DefaultInfo;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.MyPetEquipment;
 
-import static org.bukkit.Material.BONE;
-
-@DefaultInfo(food = {BONE})
+@DefaultInfo(food = {"bone"})
 public interface MySkeleton extends MyPet, MyPetEquipment {
     boolean isWither();
 
-    public void setWither(boolean flag);
+    void setWither(boolean flag);
+
+    boolean isStray();
+
+    void setStray(boolean flag);
+
+    int getType();
+
+    void setType(int type);
 }

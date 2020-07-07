@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -24,6 +24,7 @@ import de.Keyle.MyPet.MyPetApi;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.api.entity.ai.AIGoal;
 import de.Keyle.MyPet.api.entity.ai.target.TargetPriority;
+import de.Keyle.MyPet.api.util.Compat;
 import de.Keyle.MyPet.compat.v1_7_R4.entity.EntityMyPet;
 import net.minecraft.server.v1_7_R4.EntityLiving;
 import net.minecraft.server.v1_7_R4.EntityPlayer;
@@ -33,7 +34,8 @@ import org.bukkit.craftbukkit.v1_7_R4.entity.CraftPlayer;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
-public class HurtByTarget extends AIGoal {
+@Compat("v1_7_R4")
+public class HurtByTarget implements AIGoal {
     EntityMyPet petEntity;
     MyPet myPet;
     EntityLiving target = null;
@@ -63,12 +65,12 @@ public class HurtByTarget extends AIGoal {
 
             if (targetPlayer == myPet.getOwner().getPlayer()) {
                 return false;
-            } else if (!MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), targetPlayer, true)) {
+            } else if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), targetPlayer, true)) {
                 return false;
             }
         } else if (target instanceof EntityMyPet) {
             MyPet targetMyPet = ((EntityMyPet) target).getMyPet();
-            if (!MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), targetMyPet.getOwner().getPlayer(), true)) {
+            if (!MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), targetMyPet.getOwner().getPlayer(), true)) {
                 return false;
             }
         } else if (target instanceof EntityTameableAnimal) {
@@ -80,7 +82,7 @@ public class HurtByTarget extends AIGoal {
                 }
             }
         }
-        return MyPetApi.getHookManager().canHurt(myPet.getOwner().getPlayer(), target.getBukkitEntity());
+        return MyPetApi.getHookHelper().canHurt(myPet.getOwner().getPlayer(), target.getBukkitEntity());
     }
 
     @Override

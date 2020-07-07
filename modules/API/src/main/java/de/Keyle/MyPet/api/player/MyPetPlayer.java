@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -20,7 +20,6 @@
 
 package de.Keyle.MyPet.api.player;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.BiMap;
 import de.Keyle.MyPet.api.WorldGroup;
 import de.Keyle.MyPet.api.entity.MyPet;
@@ -30,9 +29,11 @@ import de.keyle.knbt.TagBase;
 import de.keyle.knbt.TagCompound;
 import org.bukkit.entity.Player;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface MyPetPlayer extends Scheduler, NBTStorage {
+
     String getName();
 
     boolean hasCustomData();
@@ -60,6 +61,8 @@ public interface MyPetPlayer extends Scheduler, NBTStorage {
     void setCaptureHelperActive(boolean captureHelperMode);
 
     void setMyPetForWorldGroup(String worldGroup, UUID myPetUUID);
+
+    void setMyPetForWorldGroup(WorldGroup worldGroup, UUID myPetUUID);
 
     UUID getMyPetForWorldGroup(String worldGroup);
 
@@ -105,9 +108,9 @@ public interface MyPetPlayer extends Scheduler, NBTStorage {
 
     void sendMessage(String message);
 
-    //donate-delete-start
+    boolean sendMessage(String message, int cooldown);
+
     DonateCheck.DonationRank getDonationRank();
 
     void checkForDonation();
-    //donate-delete-end
 }

@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -26,28 +26,29 @@ import org.bukkit.Bukkit;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CompatUtil {
     private static final Pattern PACKAGE_VERSION_MATCHER = Pattern.compile(".*\\.(v\\d+_\\d+_R\\d+)(?:.+)?");
-    private static final Pattern MINECRAFT_VERSION_MATCHER = Pattern.compile("\\(MC: (\\d\\.\\d)(?:\\.\\d+)?\\)");
+    private static final Pattern MINECRAFT_VERSION_MATCHER = Pattern.compile("\\(MC: (\\d\\.\\d+(?:\\.\\d+)?)");
+    private static final Pattern VERSION_MATCHER = Pattern.compile("\\d\\.\\d+(?:\\.\\d+)?");
 
     private String internalVersion = null;
-    private int minecraftVersion = 0;
+    private String minecraftVersion = "0.0.0";
+
+    private Map<String, Integer> compareCache = new HashMap<>();
 
     public CompatUtil() {
         Matcher regexMatcher = PACKAGE_VERSION_MATCHER.matcher(Bukkit.getServer().getClass().getCanonicalName());
         if (regexMatcher.find()) {
             internalVersion = regexMatcher.group(1);
         }
-        //TODO find better way to represent the version because 2.0 < 1.10 = 20 < 110
         regexMatcher = MINECRAFT_VERSION_MATCHER.matcher(Bukkit.getVersion());
         if (regexMatcher.find()) {
-            String version = regexMatcher.group(1).replace(".", "");
-            if (Util.isInt(version)) {
-                minecraftVersion = Integer.parseInt(version);
-            }
+            minecraftVersion = regexMatcher.group(1);
         }
     }
 
@@ -92,7 +93,23 @@ public class CompatUtil {
         return internalVersion;
     }
 
-    public int getMinecraftVersion() {
+    public String getMinecraftVersion() {
         return minecraftVersion;
+    }
+
+    public int compareWithMinecraftVersion(String version) {
+        if (VERSION_MATCHER.matcher(version).find()) {
+            if (compareCache.containsKey(minecraftVersion + "-::-" + version)) {
+                return compareCache.get(minecraftVersion + "-::-" + version);
+            }
+            int compare = Util.versionCompare(minecraftVersion, version);
+            compareCache.put(minecraftVersion + "-::-" + version, compare);
+            return compare;
+        }
+        throw new IllegalArgumentException("\"version\" must be a valid Minecraft version. \"" + version + "\" given.");
+    }
+
+    public boolean isCompatible(String version) {
+        return compareWithMinecraftVersion(version) >= 0;
     }
 }

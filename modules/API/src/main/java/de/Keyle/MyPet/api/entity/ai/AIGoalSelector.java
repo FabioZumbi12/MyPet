@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -23,9 +23,17 @@ package de.Keyle.MyPet.api.entity.ai;
 import java.util.*;
 
 public class AIGoalSelector {
+
     private Map<String, AIGoal> AIGoalMap = new HashMap<>();
     private List<AIGoal> AIGoalList = new LinkedList<>();
     private List<AIGoal> activeAIGoalList = new LinkedList<>();
+
+    int skippedTicks = 0;
+    private int skipTicks;
+
+    public AIGoalSelector(int skipTicks) {
+        this.skipTicks = skipTicks;
+    }
 
     public void addGoal(String name, AIGoal myPetAIgoal) {
         if (AIGoalMap.containsKey(name)) {
@@ -96,6 +104,14 @@ public class AIGoalSelector {
     }
 
     public void tick() {
+        if (skipTicks > 0) {
+            if (skippedTicks++ < skipTicks) {
+                return;
+            } else {
+                skippedTicks = 0;
+            }
+        }
+
         // add goals
         ListIterator iterator = AIGoalList.listIterator();
         while (iterator.hasNext()) {

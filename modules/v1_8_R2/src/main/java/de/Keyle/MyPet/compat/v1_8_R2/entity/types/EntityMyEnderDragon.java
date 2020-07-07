@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -20,16 +20,26 @@
 
 package de.Keyle.MyPet.compat.v1_8_R2.entity.types;
 
+import de.Keyle.MyPet.api.Configuration;
 import de.Keyle.MyPet.api.entity.EntitySize;
 import de.Keyle.MyPet.api.entity.MyPet;
 import de.Keyle.MyPet.compat.v1_8_R2.entity.EntityMyPet;
+import de.Keyle.MyPet.compat.v1_8_R2.entity.EntityMyPetPart;
 import de.Keyle.MyPet.compat.v1_8_R2.entity.ai.attack.MeleeAttack;
+import net.minecraft.server.v1_8_R2.Entity;
 import net.minecraft.server.v1_8_R2.World;
 
 @EntitySize(width = 8.F, height = 8.F)
 public class EntityMyEnderDragon extends EntityMyPet {
+
+    public EntityMyPetPart[] children = new EntityMyPetPart[8];
+
     public EntityMyEnderDragon(World world, MyPet myPet) {
         super(world, myPet);
+
+        for (int i = 0; i < 8; i++) {
+            this.children[i] = new EntityMyPetPart(this);
+        }
     }
 
     @Override
@@ -53,16 +63,23 @@ public class EntityMyEnderDragon extends EntityMyPet {
 
     public void onLivingUpdate() {
         super.onLivingUpdate();
-
-        if (!this.onGround && this.motY < 0.0D) {
-            this.motY *= 0.6D;
+        if (Configuration.MyPet.EnderDragon.CAN_GLIDE) {
+            if (!this.onGround && this.motY < 0.0D) {
+                this.motY *= 0.6D;
+            }
         }
     }
-
 
     /**
      * -> disable falldamage
      */
     public void e(float f, float f1) {
+        if (!Configuration.MyPet.EnderDragon.CAN_GLIDE) {
+            super.e(f, f1);
+        }
+    }
+
+    public Entity[] aB() {
+        return this.children;
     }
 }

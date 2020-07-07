@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -20,12 +20,14 @@
 
 package de.Keyle.MyPet.compat.v1_9_R1.skill.skills.ranged.nms;
 
-import de.Keyle.MyPet.api.skill.skills.ranged.EntityMyPetProjectile;
+import de.Keyle.MyPet.api.entity.skill.ranged.EntityMyPetProjectile;
+import de.Keyle.MyPet.api.util.Compat;
 import de.Keyle.MyPet.compat.v1_9_R1.entity.EntityMyPet;
 import de.Keyle.MyPet.compat.v1_9_R1.skill.skills.ranged.bukkit.CraftMyPetSmallFireball;
 import net.minecraft.server.v1_9_R1.*;
 import org.bukkit.craftbukkit.v1_9_R1.entity.CraftEntity;
 
+@Compat("v1_9_R1")
 public class MyPetSmallFireball extends EntitySmallFireball implements EntityMyPetProjectile {
     protected float damage = 0;
     protected int deathCounter = 100;
@@ -71,9 +73,11 @@ public class MyPetSmallFireball extends EntitySmallFireball implements EntityMyP
     }
 
     @Override
-    protected void a(MovingObjectPosition movingobjectposition) {
-        if (movingobjectposition.entity != null) {
-            movingobjectposition.entity.damageEntity(DamageSource.fireball(this, this.shooter), damage);
+    protected void a(MovingObjectPosition movingObjectPosition) {
+        if (movingObjectPosition.entity != null) {
+            if (movingObjectPosition.entity instanceof EntityLiving) {
+                movingObjectPosition.entity.damageEntity(DamageSource.fireball(this, this.shooter), damage);
+            }
         }
         die();
     }
@@ -87,5 +91,9 @@ public class MyPetSmallFireball extends EntitySmallFireball implements EntityMyP
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public boolean damageEntity(DamageSource damagesource, float f) {
+        return false;
     }
 }

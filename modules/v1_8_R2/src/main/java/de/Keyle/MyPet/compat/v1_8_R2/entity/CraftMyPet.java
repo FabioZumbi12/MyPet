@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -25,12 +25,15 @@ import de.Keyle.MyPet.api.entity.MyPetBukkitEntity;
 import de.Keyle.MyPet.api.entity.MyPetType;
 import de.Keyle.MyPet.api.entity.ai.target.TargetPriority;
 import de.Keyle.MyPet.api.player.MyPetPlayer;
+import de.Keyle.MyPet.api.util.Compat;
+import de.Keyle.MyPet.api.util.DoNotUse;
 import org.bukkit.craftbukkit.v1_8_R2.CraftServer;
 import org.bukkit.craftbukkit.v1_8_R2.entity.CraftCreature;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 
+@Compat("v1_8_R2")
 public class CraftMyPet extends CraftCreature implements MyPetBukkitEntity {
     protected MyPetPlayer petOwner;
     protected EntityMyPet petEntity;
@@ -40,47 +43,57 @@ public class CraftMyPet extends CraftCreature implements MyPetBukkitEntity {
         petEntity = entityMyPet;
     }
 
-    @Deprecated
+    @DoNotUse
     public void _INVALID_damage(int amount) {
         damage((double) amount);
     }
 
-    @Deprecated
+    @DoNotUse
     public void _INVALID_damage(int amount, Entity source) {
         damage((double) amount, source);
     }
 
-    @Deprecated
+    @DoNotUse
     public int _INVALID_getHealth() {
         return (int) getHealth();
     }
 
-    @Deprecated
+    @DoNotUse
     public int _INVALID_getLastDamage() {
         return (int) getLastDamage();
     }
 
-    @Deprecated
+    @DoNotUse
     public int _INVALID_getMaxHealth() {
         return (int) getMaxHealth();
     }
 
-    @Deprecated
+    @DoNotUse
     public void _INVALID_setHealth(int health) {
         setHealth((double) health);
     }
 
-    @Deprecated
+    @DoNotUse
     public void _INVALID_setLastDamage(int damage) {
         setLastDamage((double) damage);
     }
 
-    @Deprecated
+    @DoNotUse
     public void _INVALID_setMaxHealth(int health) {
     }
 
     public boolean canMove() {
         return petEntity.canMove();
+    }
+
+    @Override
+    public void setSitting(boolean sitting) {
+        getHandle().setSitting(sitting);
+    }
+
+    @Override
+    public boolean isSitting() {
+        return getHandle().isSitting();
     }
 
     @Override
@@ -130,7 +143,6 @@ public class CraftMyPet extends CraftCreature implements MyPetBukkitEntity {
         super.setHealth(health);
     }
 
-    @Deprecated
     public void setTarget(LivingEntity target) {
         setTarget(target, TargetPriority.Bukkit);
     }

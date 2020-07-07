@@ -1,7 +1,7 @@
 /*
  * This file is part of MyPet
  *
- * Copyright © 2011-2016 Keyle
+ * Copyright © 2011-2019 Keyle
  * MyPet is licensed under the GNU Lesser General Public License.
  *
  * MyPet is free software: you can redistribute it and/or modify
@@ -37,9 +37,8 @@ public class MyPetVersion {
     private static String build = "0";
     private static String minecraftVersion = "0.0.0";
     private static List<String> bukkitPackets = new ArrayList<>();
-    private static boolean premium = false;
 
-    private static void getManifestVersion() {
+    private static void loadData() {
         try {
             String path = MyPetVersion.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
             Attributes attr = getClassLoaderForExtraModule(path).getMainAttributes();
@@ -58,9 +57,6 @@ public class MyPetVersion {
                 MyPetVersion.bukkitPackets.clear();
                 Collections.addAll(MyPetVersion.bukkitPackets, bukkitPackets.split(";"));
             }
-            if (attr.getValue("Premium") != null) {
-                premium = true;
-            }
         } catch (IOException | URISyntaxException e) {
             e.printStackTrace();
         }
@@ -76,15 +72,19 @@ public class MyPetVersion {
 
     public static String getVersion() {
         if (!updated) {
-            getManifestVersion();
+            loadData();
             updated = true;
         }
         return version;
     }
 
+    public static boolean isDevBuild() {
+        return getVersion().contains("SNAPSHOT");
+    }
+
     public static String getBuild() {
         if (!updated) {
-            getManifestVersion();
+            loadData();
             updated = true;
         }
         return build;
@@ -92,7 +92,7 @@ public class MyPetVersion {
 
     public static String getMinecraftVersion() {
         if (!updated) {
-            getManifestVersion();
+            loadData();
             updated = true;
         }
         return minecraftVersion;
@@ -100,7 +100,7 @@ public class MyPetVersion {
 
     public static boolean isValidBukkitPacket(String p1) {
         if (!updated) {
-            getManifestVersion();
+            loadData();
             updated = true;
         }
         for (String p2 : bukkitPackets) {
@@ -113,18 +113,10 @@ public class MyPetVersion {
 
     public static List<String> getBukkitPackets() {
         if (!updated) {
-            getManifestVersion();
+            loadData();
             updated = true;
         }
         return Collections.unmodifiableList(bukkitPackets);
-    }
-
-    public static boolean isPremium() {
-        if (!updated) {
-            getManifestVersion();
-            updated = true;
-        }
-        return premium;
     }
 
     public static void reset() {
